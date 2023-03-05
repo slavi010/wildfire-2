@@ -559,6 +559,11 @@ function changeType() {
     if (userData.evt_data === undefined)
         userData.evt_data = {};
     figure.setUserData(userData);
+
+    if ($.inArray(userData.evt, link_types) !== -1) {
+        figure.updateUserData();
+    }
+
     $('#sidePanelEventDetails').html(getEventOptionsHtml(figure.userData));
     setDetailListeners();
 }
@@ -931,12 +936,18 @@ function importJSON(json) {
     reader.unmarshal(canvas, importedjson.canvas);
 
     nodes = [];
-    for (let i=0; i<canvas.figures.data.length; i++) {
+    links = [];
+    for (let i = 0; i < canvas.figures.data.length; i++) {
         nodes.push(canvas.figures.data[i]);
+
         canvas.figures.data[i].setResizeable(false);
         canvas.figures.data[i].on("move", function (obj, ctx) {
             canvasResize();
         });
+    }
+
+    for (let i = 0; i < canvas.lines.data.length; i++) {
+        links.push(canvas.lines.data[i]);
     }
 
     chrome.storage.local.set({events: importedjson.events});
@@ -953,12 +964,14 @@ function importJSON(json) {
 }
 
 function loadFromLocalStorageOrCreateNew(eventresult) {
-  chrome.storage.local.get('workflow', function (result) {
-    if (result.workflow === undefined || result.workflow === null)
-      createNewWorkflowFromEvents(eventresult);
-    else
-      importJSON(result.workflow);
-  });
+    chrome.storage.local.get('workflow', function (result) {
+        if (result.workflow === undefined || result.workflow === null)
+            createNewWorkflowFromEvents(eventresult);
+        else
+            importJSON(result.workflow);
+
+        updateAllLinkDecorators();
+    });
 }
 
 function saveToLocalStorage() {
@@ -1078,7 +1091,8 @@ function connCreate(sourcePort, targetPort, userData) {
         radius: 8,
         source: sourcePort,
         target: targetPort,
-        userData: userData
+        userData: userData,
+        // dasharray: "- "
     });
 
     let arrow = new CustomArrow(10, 10);
@@ -1090,7 +1104,71 @@ function connCreate(sourcePort, targetPort, userData) {
         conn.attr({outlineColor: "#303030"});
     });
 
+    updateLinkDecorator(conn);
+
+
     return conn;
+}
+
+function updateAllLinkDecorators() {
+    links.forEach(function (link) {
+        updateLinkDecorator(link);
+    });
+}
+
+function updateLinkDecorator(link) {
+    const userData = link.getUserData()
+
+    // first time init of the decorator
+    if (link.isDecoratorAdded === undefined) {
+        // Add a label on the connection with a position locator.
+        let label = new draw2d.shape.basic.Label({
+            text: userData.evt,
+            bgColor: "#ffffff",
+            stroke: 0,
+            color: "#303030",
+        });
+        // Remove the possibility to edit the label via direct mouse click
+        label.installEditor(new draw2d.ui.LabelInplaceEditor());
+        label.on("dblclick", function (emitter, event) {
+            event.stopPropagation();
+        });
+        label.on("contextmenu", function (emitter, event) {
+            event.stopPropagation();
+        });
+
+        // Position the label on the connection
+        link.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
+
+        // add a fonction to update the userData show of the connection
+        link.updateUserData = function () {
+            label.setText(this.userData.evt);
+            label.setVisible(true);
+            switch (this.userData.evt) {
+                case 'timer':
+                    if (this.userData.wait_time !== undefined && this.userData.wait_time !== 0)
+                        label.setText(this.userData.wait_time / 1000 + "s");
+                    else
+                        label.setVisible(false);
+                    break;
+                case 'wait_for_element':
+                    label.setText("Wait for element");
+                    break;
+                case 'wait_for_title':
+                    label.setText("Wait for title == '" + this.userData.title + "'");
+                    break;
+                case 'test_expression':
+                    label.setText(this.userData.expr);
+                    break;
+                case 'wait_for_time':
+                    label.setText(this.userData.waittilltime);
+            }
+        };
+
+        link.isDecoratorAdded = true;
+    }
+
+    link.updateUserData();
 }
 
 $(window).load(function () {
