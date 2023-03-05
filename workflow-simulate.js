@@ -1,16 +1,16 @@
-var CustomTick, CustomCross, CustomPending, CustomStop, CustomNode, CustomArrow, CustomSection;
+let  CustomTick, CustomCross, CustomPending, CustomStop, CustomNode, CustomArrow, CustomSection;
 
-var myRaftLabelLocator = draw2d.layout.locator.TopLocator.extend({
+let  myRaftLabelLocator = draw2d.layout.locator.TopLocator.extend({
     NAME: "myRaftLabelLocator",
     init: function() {
         this._super();
     },
     relocate: function(index, target) {
-        var parent = target.getParent();
-        var boundingBox = parent.getBoundingBox();
-        var offset = (parent instanceof draw2d.Port) ? boundingBox.w/2 : 0;
+        let  parent = target.getParent();
+        let  boundingBox = parent.getBoundingBox();
+        let  offset = (parent instanceof draw2d.Port) ? boundingBox.w/2 : 0;
   
-        var targetBoundingBox = target.getBoundingBox();
+        let  targetBoundingBox = target.getBoundingBox();
         if (target instanceof draw2d.Port) {
             target.setPosition(boundingBox.w/2-offset,0);
         } else {
@@ -31,11 +31,11 @@ function defineCustoms() {
             this._super(attr);
 
             setTimeout(function(self) { // need the timeout, some weird loss of scope issue - 31/1/16: Needed because the userData isnt set when init is called
-                var event = self.userData.evt;
+                let  event = self.userData.evt;
 
-                if (event == "begin_recording")
+                if (event === "begin_recording")
                     self.setDeleteable(false);
-                var CustomIcon = draw2d.SetFigure.extend({
+                let  CustomIcon = draw2d.SetFigure.extend({
                     init : function(){ this._super(); },
                     createSet: function(){
                         this.canvas.paper.setStart();
@@ -59,7 +59,7 @@ function defineCustoms() {
             setTimeout(function(self) {
                 self.setResizeable(true);
                 if (self.userData && self.userData.section) {
-                    var label = new draw2d.shape.basic.Label({
+                    let  label = new draw2d.shape.basic.Label({
                         text: self.userData.section_name,
                         x: (window.innerWidth/2)-100,
                         y: (window.innerHeight/2)-50,
