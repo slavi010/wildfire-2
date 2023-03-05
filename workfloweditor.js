@@ -1,14 +1,16 @@
-var canvas;
-var conn;
-var nodes = [];
-var node;
-var links = [];
-var figure;
-var gridPolicy;
-var delayedResizeCounter;
-var CustomTracker = [];
+// noinspection JSJQueryEfficiency
 
-var link_types = [
+let canvas;
+let conn;
+let nodes = [];
+let node;
+let links = [];
+let figure;
+let gridPolicy;
+let delayedResizeCounter;
+let CustomTracker = [];
+
+let link_types = [
   "timer",
   "wait_for_element",
   "wait_for_title",
@@ -17,13 +19,13 @@ var link_types = [
 ];
 
 function deleteSelection() {
-  if (figure.userData && figure.userData.evt && figure.userData.evt == "begin_recording")
+  if (figure.userData && figure.userData.evt && figure.userData.evt === "begin_recording")
     return;
   
   canvas.getCommandStack().startTransaction('delete_multiple');
-  var selection = canvas.getSelection();
+  let selection = canvas.getSelection();
   selection.each(function(i, o) {
-    var command = new draw2d.command.CommandDelete(o);
+    let command = new draw2d.command.CommandDelete(o);
     canvas.getCommandStack().execute(command);
   });
   canvas.getCommandStack().commitTransaction();
@@ -55,7 +57,7 @@ function getEventOptionsHtml(userdata) {
     "    <input type=\"text\" class=\"form-control\" id=\"section_name\" value=\"" + escapeOrDefault(userdata.section_name.replace(/\"/g,'&quot;'),"") + "\">" +
     "    <br />" +
     "</div>";
-  } else if (userdata.evt == "scroll") {
+  } else if (userdata.evt === "scroll") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_scrollLeftEnd\">Scroll To</label>" +
     "    <div class=\"row\"><div class=\"col-sm-6\" style=\"padding-right: 5px;\"><div class=\"input-group\">" +
     "        <div class=\"input-group-addon\">x</div>" +
@@ -71,7 +73,7 @@ function getEventOptionsHtml(userdata) {
     "        <div class=\"input-group-addon\">secs</div>" +
     "    </div>" +
     "</div>";
-  } else if (userdata.evt == "click") {
+  } else if (userdata.evt === "click") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_x\">Position</label>" +
     "    <div class=\"row\"><div class=\"col-sm-6\" style=\"padding-right: 5px;\"><div class=\"input-group\">" +
     "        <div class=\"input-group-addon\">x</div>" +
@@ -101,7 +103,7 @@ function getEventOptionsHtml(userdata) {
     "    <br /><label class=\"form-label semibold\" for=\"event_css_selector\">CSS Selector</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"csspath\" id=\"event_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.csspath,"") + "\">" +
     "</div>";
-  } else if (userdata.evt == "mouseup" || userdata.evt == "mousedown") {
+  } else if (userdata.evt === "mouseup" || userdata.evt === "mousedown") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_x\">Position</label>" +
     "    <div class=\"row\"><div class=\"col-sm-6\" style=\"padding-right: 5px;\"><div class=\"input-group\">" +
     "        <div class=\"input-group-addon\">x</div>" +
@@ -127,7 +129,7 @@ function getEventOptionsHtml(userdata) {
     "    <br /><label class=\"form-label semibold\" for=\"event_css_selector\">CSS Selector</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"csspath\" id=\"event_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.csspath,"") + "\">" +
     "</div>";
-  } else if (userdata.evt == "mouseover" || userdata.evt == "mouseout") {
+  } else if (userdata.evt === "mouseover" || userdata.evt === "mouseout") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_x\">Position</label>" +
     "    <div class=\"row\"><div class=\"col-sm-6\" style=\"padding-right: 5px;\"><div class=\"input-group\">" +
     "        <div class=\"input-group-addon\">x</div>" +
@@ -140,12 +142,12 @@ function getEventOptionsHtml(userdata) {
     "    <br /><label class=\"form-label semibold\" for=\"event_css_selector\">CSS Selector</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"csspath\" id=\"event_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.csspath,"") + "\">" +
     "</div>";
-  } else if (userdata.evt == "focusin" || userdata.evt == "focusout" || userdata.evt == "submit" || userdata.evt == "select") {
+  } else if (userdata.evt === "focusin" || userdata.evt === "focusout" || userdata.evt === "submit" || userdata.evt === "select") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_css_selector\">CSS Selector</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"csspath\" id=\"event_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.csspath,"") + "\">" +
     "    <br />" +
     "</div>";
-  } else if (userdata.evt == "input") {
+  } else if (userdata.evt === "input") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_value\">Value</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"value\" id=\"event_value\" value=\"" + escapeOrDefault(userdata.evt_data.value,"") + "\">" +
     "    <br /><label class=\"form-label semibold\" for=\"event_css_selector\">CSS Selector</label>" +
@@ -160,16 +162,16 @@ function getEventOptionsHtml(userdata) {
     "      <label for=\"event_useOSInput\">Use Desktop Automation</label>" +
     "    </div>" +
     "</div>";
-  } else if (userdata.evt == "change") {
+  } else if (userdata.evt === "change") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_value\">Value</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"value\" id=\"event_value\" value=\"" + escapeOrDefault(userdata.evt_data.value,"") + "\">" +
     "    <br /><label class=\"form-label semibold\" for=\"event_css_selector\">CSS Selector</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"csspath\" id=\"event_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.csspath,"") + "\">" +
     "</div>";
-  } else if (userdata.evt == "keydown" || userdata.evt == "keyup" || userdata.evt == "keypress") {
-    var chars = "";
-    for (var i=48; i<127; i++) {
-      if (userdata.evt_data.keyCode == i)
+  } else if (userdata.evt === "keydown" || userdata.evt === "keyup" || userdata.evt === "keypress") {
+    let chars = "";
+    for (let i=48; i<127; i++) {
+      if (userdata.evt_data.keyCode === i)
         chars += "      <option selected=\"selected\" value=\"" + i + "\">" + String.fromCharCode(i) + "</option>";
       else
         chars += "      <option value=\"" + i + "\">" + String.fromCharCode(i) + "</option>";
@@ -222,17 +224,17 @@ function getEventOptionsHtml(userdata) {
 		"      <label for=\"event_useOSInput\">Use Desktop Automation</label>" +
     "    </div>" +
     "</div>";
-  } else if (userdata.evt == "customjs") {
+  } else if (userdata.evt === "customjs") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"code\">Code</label>" +
     "    <textarea rows=\"8\" style=\"resize: none;white-space: nowrap;\" required class=\"form-control event-detail\" data-event-detail=\"code\" id=\"code\">" + escapeOrDefault(userdata.evt_data.code,"") + "</textarea>" +
     "    <br />" +
     "</div>";
-  } else if (userdata.evt == "purgecookies") {
+  } else if (userdata.evt === "purgecookies") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"searchterm\">Domain Search Term</label>" +
     "    <input type=\"text\" required class=\"form-control event-detail\" data-event-detail=\"searchterm\" id=\"searchterm\" value=\"" + escapeOrDefault(userdata.evt_data.searchterm,"example.com") + "\">" +
     "    <br />" +
     "</div>";
-  } else if (userdata.evt == "ocr") {
+  } else if (userdata.evt === "ocr") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"ocrsearchterm\">Search Term</label>" +
     "    <input type=\"text\" required class=\"form-control event-detail\" data-event-detail=\"ocrsearchterm\" id=\"ocrsearchterm\" value=\"" + escapeOrDefault(userdata.evt_data.ocrsearchterm,"") + "\">" +
     "    <br />" +
@@ -246,7 +248,7 @@ function getEventOptionsHtml(userdata) {
 		"      <label for=\"event_useOSInput\">Use Desktop Automation</label>" +
 	  "    </div>" +
     "</div>";
-  } else if (userdata.evt == "subimage") {
+  } else if (userdata.evt === "subimage") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"subimg\">Search Image</label>" +
     (userdata.evt_data.subimgfile ? "    <div id=\"subimg-files\"><img style=\"max-width: 100%; max-height: 200px;\" src=\"" + userdata.evt_data.subimgresults + "\" /><br /><small><a id=\"clearSubimg\">Clear</a></small><br /></div><div style=\"display: none;\" id=\"subimg-drop-zone\"><span class=\"btn btn-file\"><span><i class=\"fa fa-upload\"></i> Choose Image</span><input id=\"event_subimgfile\" type=\"file\" name=\"event_subimgfile[]\"></span></div>" : "    <div id=\"subimg-files\"></div><div id=\"subimg-drop-zone\"><span class=\"btn btn-file\"><span><i class=\"fa fa-upload\"></i> Choose Image</span><input id=\"event_subimgfile\" type=\"file\" name=\"event_subimgfile[]\"></span></div>") +
     "    </div>" + 
@@ -259,14 +261,14 @@ function getEventOptionsHtml(userdata) {
 		"      <label for=\"event_useOSInput\">Use Desktop Automation</label>" +
     "    </div>" +
     "</div>";
-  } else if (userdata.evt == "screenshot") {
+  } else if (userdata.evt === "screenshot") {
     return "    <label class=\"form-label semibold\" for=\"event_useOSInput\">Options</label>" +
     "    <div class=\"checkbox-bird\">" +
 		"      <input type=\"checkbox\" id=\"event_useOSInput\">" +
 		"      <label for=\"event_useOSInput\">Use Desktop Automation</label>" +
     "    </div>" +
     "</div>";
-  } else if (userdata.evt == "setvar") {
+  } else if (userdata.evt === "setvar") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"var\">Variable</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"var\" id=\"var\" value=\"" + escapeOrDefault(userdata.evt_data.var,"") + "\">" +
     "    </div><div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_usage\">Value Type</label>" +
@@ -286,7 +288,7 @@ function getEventOptionsHtml(userdata) {
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"expr\" id=\"expr\" value=\"" + escapeOrDefault(userdata.evt_data.expr,"") + "\">" +
     "    <br />" +
     "</div>";
-  } else if (userdata.evt == "tabswitch") {
+  } else if (userdata.evt === "tabswitch") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_method\">Method</label>" +
     "    <select class=\"form-control event-detail\" data-event-detail=\"method\" id=\"event_method\">" +
     "        <option value=\"url\">By URL</option>" +
@@ -299,7 +301,7 @@ function getEventOptionsHtml(userdata) {
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"index\" id=\"index\" value=\"" + escapeOrDefault(userdata.evt_data.index,"") + "\">" +
     "    <br />" +
     "    </div>";
-  } else if (userdata.evt == "tabremove") {
+  } else if (userdata.evt === "tabremove") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_method\">Method</label>" +
     "    <select class=\"form-control event-detail\" data-event-detail=\"method\" id=\"event_method\">" +
     "        <option value=\"active\">Use Current Tab</option>" +
@@ -313,7 +315,7 @@ function getEventOptionsHtml(userdata) {
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"index\" id=\"index\" value=\"" + escapeOrDefault(userdata.evt_data.index,"") + "\">" +
     "    <br />" +
     "    </div>";
-  } else if (userdata.evt == "csvimport") {
+  } else if (userdata.evt === "csvimport") {
     if (userdata.evt_data.csvfile) {
       return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"csv\">CSV File</label>" +
       "    <div id=\"csv-files\"><i class=\"fa fa-file-o\"></i> " + userdata.evt_data.csvfile.name + " <small><a id=\"clearCsv\">Clear</a></small><br /></div><div style=\"display: none;\" id=\"csv-drop-zone\"><span class=\"btn btn-file\"><span><i class=\"fa fa-upload\"></i> Choose CSV File</span><input id=\"event_csvfile\" type=\"file\" name=\"event_csvfile[]\"></span></div>" +
@@ -323,7 +325,7 @@ function getEventOptionsHtml(userdata) {
     "    <div id=\"csv-files\"></div><div id=\"csv-drop-zone\">" +
 	  "     <span class=\"btn btn-file\"><span><i class=\"fa fa-upload\"></i> Choose CSV File</span><input id=\"event_csvfile\" type=\"file\" name=\"event_csvfile[]\"></span></div>" +
     "</div><br />";
-  } else if (userdata.evt == "tabchange") {
+  } else if (userdata.evt === "tabchange") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"url\">URL</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"url\" id=\"url\" value=\"" + escapeOrDefault(userdata.evt_data.url,"about:blank") + "\">" +
     "    <br />" +
@@ -333,11 +335,11 @@ function getEventOptionsHtml(userdata) {
 		"      <label for=\"event_newtab\">Open in New Tab</label>" +
 	  "    </div>" +
     "</div>";
-  } else if (userdata.evt == "begin_recording" || userdata.evt == "end_recording" || userdata.evt == "clipboard_cut" || userdata.evt == "clipboard_copy" || userdata.evt == "clipboard_paste") {
+  } else if (userdata.evt === "begin_recording" || userdata.evt === "end_recording" || userdata.evt === "clipboard_cut" || userdata.evt === "clipboard_copy" || userdata.evt === "clipboard_paste") {
     return "";
-  } else if (userdata.evt == "closewindow") {
+  } else if (userdata.evt === "closewindow") {
     return "";
-  } else if (userdata.evt == "setproxy") {
+  } else if (userdata.evt === "setproxy") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_scheme\">Proxy Type</label>" +
     "    <select class=\"form-control event-detail\" data-event-detail=\"scheme\" id=\"event_scheme\">" +
     "        <option value=\"http\">HTTP</option>" +
@@ -354,12 +356,12 @@ function getEventOptionsHtml(userdata) {
     "</div><div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_password\">Password</label>" +
     "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"password\" id=\"event_password\" value=\"" + escapeOrDefault(userdata.evt_data.password,"") + "\">" +
     "</div><br />";
-  } else if (userdata.evt == "recaptcha") {
+  } else if (userdata.evt === "recaptcha") {
     return "";
-  } else if (userdata.evt == "timer" || userdata.evt === undefined) {
+  } else if (userdata.evt === "timer" || userdata.evt === undefined) {
     if (userdata.wait_time === undefined)
       userdata.wait_time = 0;
-    var wait_time = 0;
+    let wait_time = 0;
     if (isNaN(parseFloat(userdata.wait_time)))
       wait_time = userdata.wait_time;
     else
@@ -370,19 +372,19 @@ function getEventOptionsHtml(userdata) {
     "        <div class=\"input-group-addon\">secs</div>" +
     "    </div>" +
     "</div>";
-  } else if (userdata.evt == "wait_for_element") {
+  } else if (userdata.evt === "wait_for_element") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_detail_csspath\">CSS Selector</label>" +
     "    <input type=\"text\" class=\"form-control\" id=\"event_detail_csspath\" value=\"" + escapeOrDefault(userdata.csspath,"") + "\">" +
     "</div>";
-  } else if (userdata.evt == "wait_for_title") {
+  } else if (userdata.evt === "wait_for_title") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_detail_title\">Title</label>" +
     "    <input type=\"text\" class=\"form-control\" id=\"event_detail_title\" value=\"" + escapeOrDefault(userdata.title,"") + "\">" +
     "</div>";
-  } else if (userdata.evt == "test_expression") {
+  } else if (userdata.evt === "test_expression") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_detail_expression\">Expression</label>" +
     "    <input type=\"text\" class=\"form-control\" id=\"event_detail_expression\" value=\"" + escapeOrDefault(userdata.expr,"") + "\">" +
     "</div>";
-  } else if (userdata.evt == "wait_for_time") {
+  } else if (userdata.evt === "wait_for_time") {
     return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_detail_waittilltime\">Time</label>" +
     "    <input type=\"text\" class=\"form-control\" id=\"event_detail_waittilltime\" value=\"" + escapeOrDefault(userdata.waittilltime,"12:00:00 AM") + "\">" +
     "</div>";
@@ -401,23 +403,23 @@ function selectedFigure(figure) {
   if (figure.userData.section) {
     $('#sidePanelTitle').text("Section Properties");
     $('#sidePanelTypeSelectGroup').attr("style","display: none;");
-  } else if ($.inArray(figure.userData.evt,link_types)==-1) {
+  } else if ($.inArray(figure.userData.evt,link_types) === -1) {
     $('#sidePanelTitle').text("Event Properties");
     $('#sidePanelTypeSelect').removeAttr('disabled');
-    if (figure.userData.evt == "begin_recording") {
+    if (figure.userData.evt === "begin_recording") {
       $('#sidePanelTypeSelect').attr('disabled','disabled');
       $('#sidePanelTypeSelect').html(
         "<option value='begin_recording' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-runner.png\"/>Begin Recording</span>'>Begin Recording</option>"
       ).selectpicker('refresh');
       $('#sidePanelTypeSelect').attr('disabled','disabled');
     } else {
-      var selecthtml = "";
-      for (var event in mappingData) {
-        if (event != "begin_recording") {
+      let selecthtml = "";
+      for (let event in mappingData) {
+        if (event !== "begin_recording") {
           if (mappingData[event].optlabel)
             selecthtml += "<optgroup label='" + mappingData[event].optlabel + "'>";
           selecthtml += '<option ';
-          if (figure.userData.evt == event)
+          if (figure.userData.evt === event)
             selecthtml += "selected='selected' ";
           selecthtml += "value='" + event + "' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-" + mappingData[event].icon + "\"/>" + mappingData[event].event_type + "</span>'>" + mappingData[event].event_type + "</option>";
           if (mappingData[event].endoptlabel)
@@ -429,7 +431,7 @@ function selectedFigure(figure) {
   } else {
     $('#sidePanelTitle').text("Link Properties");
     $('#sidePanelTypeSelect').removeAttr('disabled');
-    if (figure.userData.evt == "wait_for_element")
+    if (figure.userData.evt === "wait_for_element")
       $('#sidePanelTypeSelect').html(
         "<option value='timer' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-timer-clock.png\"/>Timer</span>'>Timer</option>" +
         "<option selected='selected' value='wait_for_element' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/page-view.png\"/>Wait For Element</span>'>Wait For Element</option>" +
@@ -437,7 +439,7 @@ function selectedFigure(figure) {
         "<option value='test_expression' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-equation.png\"/>Test Expression</span>'>Test Expression</option>" +
         "<option value='wait_for_time' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-wall-clock.png\"/>Wait For Time</span>'>Wait For Time</option>"
       ).selectpicker('refresh');
-    else if (figure.userData.evt == "wait_for_title")
+    else if (figure.userData.evt === "wait_for_title")
       $('#sidePanelTypeSelect').html(
         "<option value='timer' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-timer-clock.png\"/>Timer</span>'>Timer</option>" +
         "<option value='wait_for_element' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/page-view.png\"/>Wait For Element</span>'>Wait For Element</option>" +
@@ -445,7 +447,7 @@ function selectedFigure(figure) {
         "<option value='test_expression' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-equation.png\"/>Test Expression</span>'>Test Expression</option>" +
         "<option value='wait_for_time' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-wall-clock.png\"/>Wait For Time</span>'>Wait For Time</option>"
       ).selectpicker('refresh');
-    else if (figure.userData.evt == "timer")
+    else if (figure.userData.evt === "timer")
       $('#sidePanelTypeSelect').html(
         "<option selected='selected' value='timer' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-timer-clock.png\"/>Timer</span>'>Timer</option>" +
         "<option value='wait_for_element' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/page-view.png\"/>Wait For Element</span>'>Wait For Element</option>" +
@@ -453,7 +455,7 @@ function selectedFigure(figure) {
         "<option value='test_expression' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-equation.png\"/>Test Expression</span>'>Test Expression</option>" +
         "<option value='wait_for_time' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-wall-clock.png\"/>Wait For Time</span>'>Wait For Time</option>"
       ).selectpicker('refresh');
-    else if (figure.userData.evt == "test_expression")
+    else if (figure.userData.evt === "test_expression")
       $('#sidePanelTypeSelect').html(
         "<option value='timer' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-timer-clock.png\"/>Timer</span>'>Timer</option>" +
         "<option value='wait_for_element' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/page-view.png\"/>Wait For Element</span>'>Wait For Element</option>" +
@@ -461,7 +463,7 @@ function selectedFigure(figure) {
         "<option selected='selected' value='test_expression' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-equation.png\"/>Test Expression</span>'>Test Expression</option>" +
         "<option value='wait_for_time' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-wall-clock.png\"/>Wait For Time</span>'>Wait For Time</option>"
       ).selectpicker('refresh');
-    else if (figure.userData.evt == "wait_for_time") {
+    else if (figure.userData.evt === "wait_for_time") {
       $('#sidePanelTypeSelect').html(
         "<option value='timer' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/dark-timer-clock.png\"/>Timer</span>'>Timer</option>" +
         "<option value='wait_for_element' data-content='<span class=\"user-item\"><img style=\"-webkit-border-radius: 0; border-radius: 0;\" src=\"/icons/page-view.png\"/>Wait For Element</span>'>Wait For Element</option>" +
@@ -485,17 +487,17 @@ function selectedFigure(figure) {
       }
       if (figure.userData.evt_data.usage) {
         $('#event_usage').val(figure.userData.evt_data.usage);
-        if (figure.userData.evt_data.usage == "title" || figure.userData.evt_data.usage == "url")
+        if (figure.userData.evt_data.usage === "title" || figure.userData.evt_data.usage === "url")
           $('#expr').attr("disabled","disabled");
         else
           $('#expr').removeAttr("disabled");
         
-        if (figure.userData.evt_data.usage != "elemattr")
+        if (figure.userData.evt_data.usage !== "elemattr")
           $('#attributeblock').attr("style","display: none;");
         else
           $('#attributeblock').removeAttr("style");
       }
-      if (figure.userData.evt_data.button && figure.userData.evt_data.button == 1) {
+      if (figure.userData.evt_data.button && figure.userData.evt_data.button === 1) {
         $('#event_middlebutton').prop('checked', true);
       }
       if (figure.userData.useDirectInput) {
@@ -507,7 +509,7 @@ function selectedFigure(figure) {
       if (figure.userData.evt_data.useFuzzyMatch) {
         $('#event_useFuzzyMatch').prop('checked', true);
       }
-      if (figure.userData.evt_data.downloadlinks && figure.userData.evt_data.downloadlinks == 1) {
+      if (figure.userData.evt_data.downloadlinks && figure.userData.evt_data.downloadlinks === 1) {
         $('#event_downloadlinks').prop('checked', true);
       }
       if (figure.userData.evt_data.newtab) {
@@ -515,9 +517,9 @@ function selectedFigure(figure) {
       }
       if (figure.userData.evt_data.method) {
         $('#event_method').val(figure.userData.evt_data.method);
-        if (figure.userData.evt_data.method == "index")
+        if (figure.userData.evt_data.method === "index")
           $('#indexFieldGroup').removeAttr("style");
-        if (figure.userData.evt_data.method == "url")
+        if (figure.userData.evt_data.method === "url")
           $('#urlFieldGroup').removeAttr("style");
       }
   }
@@ -530,13 +532,13 @@ function selectedFigure(figure) {
 }
 
 function changeType() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt = $('#sidePanelTypeSelect').val();
 
-    if ($.inArray(userData.evt,link_types)==-1) {
+    if ($.inArray(userData.evt,link_types) === -1) {
       figure.resetChildren();
       figure.setBackgroundColor(mappingData[userData.evt].bgColor);
-      var CustomIcon = draw2d.SetFigure.extend({
+      let CustomIcon = draw2d.SetFigure.extend({
         init : doSuper,
         createSet: function(){
             this.canvas.paper.setStart();
@@ -559,7 +561,7 @@ function changeType() {
 
 function setDetailListeners() {
   $('#event_detail_timer').on('input', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData['wait_time'] = 0;
     if (isNaN(parseFloat($('#event_detail_timer').val())))
       userData['wait_time'] = $('#event_detail_timer').val();
@@ -568,97 +570,97 @@ function setDetailListeners() {
     figure.setUserData(userData);
   });
   $('#event_detail_waittilltime').on('input', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData['waittilltime'] = $('#event_detail_waittilltime').val();
     figure.setUserData(userData);
   });
   $('#event_detail_title').on('input', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData['title'] = $('#event_detail_title').val();
     figure.setUserData(userData);
   });
   $('#event_detail_expression').on('input', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData['expr'] = $('#event_detail_expression').val();
     figure.setUserData(userData);
   });
   $('#event_detail_csspath').on('input', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData['csspath'] = $('#event_detail_csspath').val();
     figure.setUserData(userData);
   });
   $('#section_name').on('input', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData['section_name'] = $('#section_name').val();
     figure.setUserData(userData);
     figure.getChildren().data[0].setText($('#section_name').val());
   });
   $('.event-detail').on('input', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data[$(this).attr('data-event-detail')] = $(this).val();
     figure.setUserData(userData);
   });
   $('.event-detail').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data[$(this).attr('data-event-detail')] = $(this).val();
     figure.setUserData(userData);
   });
   $('#event_middlebutton').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.button = $(this).is(":checked");
     figure.setUserData(userData);
   });
   $('#event_useDirectInput').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.useDirectInput = $(this).is(":checked");
     figure.setUserData(userData);
   });
   $('#event_useOSInput').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.useOSInput = $(this).is(":checked");
     figure.setUserData(userData);
   });
   $('#event_useFuzzyMatch').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.useFuzzyMatch = $(this).is(":checked");
     figure.setUserData(userData);
   });
   $('#event_keyCode').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.keyCode = $(this).val();
     figure.setUserData(userData);
   });
   $('#event_downloadlinks').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.downloadlinks = $(this).is(":checked");
     figure.setUserData(userData);
   });
   $('#event_newtab').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.newtab = $(this).is(":checked");
     figure.setUserData(userData);
   });
   $('#event_scrollTime').on('change', function() {
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.scrollTime = ($(this).val() * 1000);
     figure.setUserData(userData);
   });
   $('#event_usage').on('change', function() {
     console.log($(this).val());
-    if ($(this).val() == "elemattr")
+    if ($(this).val() === "elemattr")
       $('#attributeblock').removeAttr("style");
     else
       $('#attributeblock').attr("style","display: none;");
   });
 
   $('#event_csvfile').on('change', function(change_detail) {
-    if ($('#event_csvfile').val() == "") return; // cleared file
+    if ($('#event_csvfile').val() === "") return; // cleared file
 
     $("#event_csvfile").parse({
       config: {
         complete: function(results, file) {
           if (results.errors.length < 1) {
-            var userData = figure.userData;
+            let userData = figure.userData;
             userData.evt_data.csvresults = results;
             userData.evt_data.csvfile = {
               name: file.name,
@@ -671,7 +673,7 @@ function setDetailListeners() {
             $('#csv-files').html("<i class=\"fa fa-file-o\"></i> " + file.name + " <small><a id=\"clearCsv\">Clear</a></small><br />");
             $('#clearCsv').click(function(){
               $('#csv-drop-zone').attr('style','display: block;');
-              var userData = figure.userData;
+              let userData = figure.userData;
               userData.evt_data.csvresults = false;
               userData.evt_data.csvfile = false;
               figure.setUserData(userData);
@@ -693,7 +695,7 @@ function setDetailListeners() {
   });
   $('#clearCsv').click(function(){
     $('#csv-drop-zone').attr('style','display: block;');
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.csvresults = false;
     userData.evt_data.csvfile = false;
     figure.setUserData(userData);
@@ -702,11 +704,11 @@ function setDetailListeners() {
   });
 
   $('#event_subimgfile').on('change', function(change_detail) {
-    if ($('#event_subimgfile').val() == "") return; // cleared file
-    var file = change_detail.target.files[0];
-    var reader  = new FileReader();
+    if ($('#event_subimgfile').val() === "") return; // cleared file
+    let file = change_detail.target.files[0];
+    let reader  = new FileReader();
     reader.addEventListener("load", function(){
-      var userData = figure.userData;
+      let userData = figure.userData;
       userData.evt_data.subimgresults = reader.result;
       userData.evt_data.subimgfile = {
         name: file.name,
@@ -719,7 +721,7 @@ function setDetailListeners() {
       $('#subimg-files').html("<img style=\"max-width: 100%; max-height: 200px;\" src=\"" + reader.result + "\" /><br /><small><a id=\"clearSubimg\">Clear</a></small><br />");
       $('#clearSubimg').click(function(){
         $('#subimg-drop-zone').attr('style','display: block;');
-        var userData = figure.userData;
+        let userData = figure.userData;
         userData.evt_data.subimgresults = false;
         userData.evt_data.subimgfile = false;
         figure.setUserData(userData);
@@ -731,7 +733,7 @@ function setDetailListeners() {
   });
   $('#clearSubimg').click(function(){
     $('#subimg-drop-zone').attr('style','display: block;');
-    var userData = figure.userData;
+    let userData = figure.userData;
     userData.evt_data.subimgfile = false;
     figure.setUserData(userData);
     $('#subimg-files').html("");
@@ -739,7 +741,7 @@ function setDetailListeners() {
   });
   
   $('#event_usage').on('change', function() {
-    if (figure.userData.evt_data.usage == "title" || figure.userData.evt_data.usage == "url")
+    if (figure.userData.evt_data.usage === "title" || figure.userData.evt_data.usage === "url")
       $('#expr').attr("disabled","disabled");
     else
       $('#expr').removeAttr("disabled");
@@ -747,20 +749,20 @@ function setDetailListeners() {
   $('#event_method').on('change', function() {
     $('#indexFieldGroup').attr("style","display: none;");
     $('#urlFieldGroup').attr("style","display: none;");
-    if (figure.userData.evt_data.method == "index")
+    if (figure.userData.evt_data.method === "index")
       $('#indexFieldGroup').removeAttr("style");
-    if (figure.userData.evt_data.method == "url")
+    if (figure.userData.evt_data.method === "url")
       $('#urlFieldGroup').removeAttr("style");
   });
 }
 
 function addSection(label) {
-  var heights = canvas.getFigures().clone().map(function(f){ return f.getAbsoluteY()+f.getHeight();});
-  var y = 10 + Math.max.apply(Math,heights.asArray());
+  let heights = canvas.getFigures().clone().map(function(f){ return f.getAbsoluteY()+f.getHeight();});
+  let y = 10 + Math.max.apply(Math,heights.asArray());
 
   canvas.uninstallEditPolicy( gridPolicy );
 
-  var section = new CustomSection({
+  let section = new CustomSection({
     x: (window.innerWidth/2)-108,
     y: y,
     bgColor: "#f4f4f4",
@@ -774,7 +776,7 @@ function addSection(label) {
     }
   });
 
-  var command = new draw2d.command.CommandAdd(canvas, section, (window.innerWidth/2)-108, y);
+  let command = new draw2d.command.CommandAdd(canvas, section, (window.innerWidth/2)-108, y);
   canvas.getCommandStack().execute(command);
   
   //canvas.add(section);
@@ -797,12 +799,12 @@ function addSection(label) {
 }
 
 function addNode(event) {
-  var bgColor = "#999999";
+  let bgColor = "#999999";
   if (mappingData[event.evt] !== undefined)
     bgColor = mappingData[event.evt].bgColor;
   if (all_settings.directinputdefault && ["keyup","keydown","keypress","input","mouseup","mousedown","click"].includes(event.evt))
     event['useDirectInput'] = true;
-  var node = new CustomNode({ // can change Oval to Rectangle
+  let node = new CustomNode({ // can change Oval to Rectangle
     radius: 10,
     stroke:3,
     color: "#888888",
@@ -811,21 +813,21 @@ function addNode(event) {
     userData: event
   });
 
-  var portConfig = {
+  let portConfig = {
     diameter: 7,
     bgColor: "#1E90FF"
   };
   /* Order is important */
-  var rightPort = new draw2d.HybridPort(portConfig);
+  let rightPort = new draw2d.HybridPort(portConfig);
   rightPort.setName("Right");
   node.addPort(rightPort,new draw2d.layout.locator.RightLocator());
-  var bottomPort = new draw2d.HybridPort(portConfig);
+  let bottomPort = new draw2d.HybridPort(portConfig);
   bottomPort.setName("Bottom");
   node.addPort(bottomPort,new draw2d.layout.locator.BottomLocator());
-  var leftPort = new draw2d.HybridPort(portConfig);
+  let leftPort = new draw2d.HybridPort(portConfig);
   leftPort.setName("Left");
   node.addPort(leftPort,new draw2d.layout.locator.LeftLocator());
-  var topPort = new draw2d.HybridPort(portConfig);
+  let topPort = new draw2d.HybridPort(portConfig);
   topPort.setName("Top");
   node.addPort(topPort,new draw2d.layout.locator.TopLocator());
   
@@ -841,9 +843,9 @@ function deselectedFigure(figure) {
 }
 
 function canvasResize() {
-    var heights = canvas.getFigures().clone().map(function(f){ return f.getAbsoluteY()+f.getHeight();});
-    var height = Math.max(window.innerHeight-142,200 + Math.max.apply(Math,heights.asArray()));
-    if (canvas.getHeight() == height)
+    let heights = canvas.getFigures().clone().map(function(f){ return f.getAbsoluteY()+f.getHeight();});
+    let height = Math.max(window.innerHeight-142,200 + Math.max.apply(Math,heights.asArray()));
+    if (canvas.getHeight() === height)
       return;
 
     clearTimeout(delayedResizeCounter);
@@ -851,7 +853,7 @@ function canvasResize() {
         $('#graph').attr('style','width: ' + window.innerWidth + 'px; height: ' + height + 'px; background-color: #ffffff;');
         canvas.setDimension(new draw2d.geo.Rectangle(0,0,window.innerWidth,height));
 
-        var newRegion = new draw2d.policy.figure.RegionEditPolicy(new draw2d.geo.Rectangle(0,0,window.innerWidth,height));
+        let newRegion = new draw2d.policy.figure.RegionEditPolicy(new draw2d.geo.Rectangle(0,0,window.innerWidth,height));
         canvas.getFigures().each(function(i, o) {
           o.uninstallEditPolicy({NAME: "draw2d.policy.figure.RegionEditPolicy"});		
           o.installEditPolicy(newRegion);
@@ -863,24 +865,24 @@ function getCanvasImage() {
     clearProcessIcons();
     return new Promise(function(resolve, reject) {
         canvas.setCurrentSelection(null);
-        var xCoords = [];
-        var yCoords = [];
+        let xCoords = [];
+        let yCoords = [];
         canvas.getFigures().each(function(i,f){
-            var b = f.getBoundingBox();
+            let b = f.getBoundingBox();
             xCoords.push(b.x, b.x+b.w);
             yCoords.push(b.y, b.y+b.h);
         });
-        var minX   = Math.min.apply(Math, xCoords) - 30;
-        var minY   = Math.min.apply(Math, yCoords) - 30;
-        var width  = Math.max.apply(Math, xCoords)-minX + 30;
-        var height = Math.max.apply(Math, yCoords)-minY + 30;
+        let minX   = Math.min.apply(Math, xCoords) - 30;
+        let minY   = Math.min.apply(Math, yCoords) - 30;
+        let width  = Math.max.apply(Math, xCoords)-minX + 30;
+        let height = Math.max.apply(Math, yCoords)-minY + 30;
 
         canvas.getAllPorts().each(function(i,p){ // hide figure ports for screenshot
             p.setVisible(false);
         });
         gridPolicy.setGrid(1); // sexy hack to make background white
         
-        var writer = new draw2d.io.png.Writer();
+        let writer = new draw2d.io.png.Writer();
         writer.marshal(canvas,function(png){
             gridPolicy.setGrid(5); // reset sexy hack
 
@@ -891,9 +893,9 @@ function getCanvasImage() {
 
 function exportCanvasImage() {
     getCanvasImage().then(function(png){
-        var filename = "WildfireWorkflowImage_" + Math.floor(Date.now() / 1000) + ".png";
+        let filename = "WildfireWorkflowImage_" + Math.floor(Date.now() / 1000) + ".png";
 
-        var element = document.createElement('a');
+        let element = document.createElement('a');
         element.setAttribute('href', png);
         element.setAttribute('download', filename);
 
@@ -909,13 +911,13 @@ $('#workflowToolbarExportImage').click(function(){
 
 function importJSON(json) {
     canvas.clear();
-    var reader = new draw2d.io.json.Reader();
-    var importedjson = JSON.parse(decrypt(json));
+    let reader = new draw2d.io.json.Reader();
+    let importedjson = JSON.parse(decrypt(json));
 
     reader.unmarshal(canvas, importedjson.canvas);
 
     nodes = [];
-    for (var i=0; i<canvas.figures.data.length; i++) {
+    for (let i=0; i<canvas.figures.data.length; i++) {
         nodes.push(canvas.figures.data[i]);
         canvas.figures.data[i].setResizeable(false);
         canvas.figures.data[i].on("move",function(obj,ctx) {
@@ -938,7 +940,7 @@ function importJSON(json) {
 
 function loadFromLocalStorageOrCreateNew(eventresult) {
   chrome.storage.local.get('workflow', function (result) {
-    if (result.workflow === undefined || result.workflow == null)
+    if (result.workflow === undefined || result.workflow === null)
       createNewWorkflowFromEvents(eventresult);
     else
       importJSON(result.workflow);
@@ -947,9 +949,9 @@ function loadFromLocalStorageOrCreateNew(eventresult) {
 
 function saveToLocalStorage() {
     return new Promise(function(resolve, reject) {
-        var writer = new draw2d.io.json.Writer();
+        let writer = new draw2d.io.json.Writer();
         writer.marshal(canvas, function(json){
-            var jsonTxt = JSON.stringify({
+            let jsonTxt = JSON.stringify({
                 canvas: json,
                 events: events,
                 cvsHeight: $('#graph').height()
@@ -958,7 +960,7 @@ function saveToLocalStorage() {
                 resolve();
                 return;
             }
-            var text = encrypt(jsonTxt);
+            let text = encrypt(jsonTxt);
             chrome.storage.local.set({workflow: text},function(){
                 resolve();
             });
@@ -980,13 +982,13 @@ function flushWorkflow() {
 }
 
 function exportJSON() {
-  var writer = new draw2d.io.json.Writer();
+  let writer = new draw2d.io.json.Writer();
   writer.marshal(canvas, function(json){
-      var jsonTxt = JSON.stringify({
+      let jsonTxt = JSON.stringify({
         canvas: json,
         events: events
       });
-      var text = encrypt(jsonTxt);
+      let text = encrypt(jsonTxt);
       swal({
           title: "Export Workflow",
           text: "Enter your filename:",
@@ -1005,7 +1007,7 @@ function exportJSON() {
               return false;
           }
 
-          var element = document.createElement('a');
+          let element = document.createElement('a');
           element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
           element.setAttribute('download', filename);
 
@@ -1028,7 +1030,7 @@ $('#workflowToolbarImport').click(function() {
     $('#simfileContainer').click();
 });
 $('#simfileContainer').bind('change', function() {
-    var reader = new FileReader();
+    let reader = new FileReader();
 
     reader.onload = function(e) {
         importJSON(e.target.result);
@@ -1040,7 +1042,7 @@ $('#simfileContainer').bind('change', function() {
         });
     }
 
-    var file = document.getElementById('simfileContainer').files[0];
+    let file = document.getElementById('simfileContainer').files[0];
     reader.readAsText(file);
 });
 
@@ -1052,7 +1054,7 @@ function connCreate(sourcePort, targetPort, userData) {
         wait_time: 1000
       };
 
-    var router = new draw2d.layout.connection.ManhattanBridgedConnectionRouter();
+    let router = new draw2d.layout.connection.ManhattanBridgedConnectionRouter();
     conn = new draw2d.Connection({
         router: router,
         outlineStroke: 0,
@@ -1065,7 +1067,7 @@ function connCreate(sourcePort, targetPort, userData) {
         userData: userData
     });
 
-    var arrow = new CustomArrow(10,10);
+    let arrow = new CustomArrow(10,10);
     conn.setTargetDecorator(arrow);
     conn.on("dragEnter", function(emitter, event){
         conn.attr({outlineColor:"#30ff30"});
@@ -1079,8 +1081,8 @@ function connCreate(sourcePort, targetPort, userData) {
 
 $(window).load(function () {
     /* Init Page */
-    var width = window.innerWidth;
-    var height = window.innerHeight-136;
+    let width = window.innerWidth;
+    let height = window.innerHeight-136;
 
     defineCustoms();
 
@@ -1090,15 +1092,15 @@ $(window).load(function () {
 
     initCanvas();
 
-    if (window.location.hash == "#launch") {
+    if (window.location.hash === "#launch") {
       setTimeout(function(){
         initWorkflowSimulation();
       },500);
-    } else if (window.location.hash == "#export") {
+    } else if (window.location.hash === "#export") {
       setTimeout(function(){
         exportJSON();
       },800);
-    } else if (window.location.hash == "#tour1_1") {
+    } else if (window.location.hash === "#tour1_1") {
       setTimeout(function(){
         openTour1_1();
       },50);
@@ -1115,7 +1117,7 @@ $(window).load(function () {
     });
 
     chrome.storage.local.get('settings', function (result) {
-        if (result.settings.account != "" && result.settings.account !== undefined)
+        if (result.settings.account !== "" && result.settings.account !== undefined)
             $('#workflowToolbarCloudUpload').attr('style','display: block;');
     });
 });
@@ -1172,7 +1174,7 @@ function initCanvas() {
 }
 
 function createNewWorkflowFromEvents(result) {
-    var nodey;
+    let nodey;
 
     if (result.events.length < 1) { // only happens on fresh install
         result.events.push({
@@ -1180,9 +1182,9 @@ function createNewWorkflowFromEvents(result) {
             time: 0
         });
     }
-    for (var i=0; i<result.events.length; i++) {
-        var node = addNode(result.events[i]);
-        var nodex = 295 + Math.min(80*(i%24), 80*12);
+    for (let i=0; i<result.events.length; i++) {
+        let node = addNode(result.events[i]);
+        let nodex = 295 + Math.min(80*(i%24), 80*12);
         nodey = 80 + 160*Math.floor(i/24);
         if (i%24 > 11) {
             nodey += 80;
@@ -1191,27 +1193,27 @@ function createNewWorkflowFromEvents(result) {
         canvas.add(node, nodex, nodey);
         nodes.push(node);
     }
-    for (var i=1; i<nodes.length; i++) {
-        var fromPort = 0;
-        var toPort = 2;
+    for (let i=1; i<nodes.length; i++) {
+        let fromPort = 0;
+        let toPort = 2;
         if (i%24 > 11) {
             fromPort = 2;
             toPort = 0;
         }
-        if (i%24==12) {
+        if (i%24 === 12) {
             fromPort = 1;
             toPort = 3;
         }
-        if (i%24==0) {
+        if (i%24 === 0) {
             fromPort = 1;
             toPort = 3;
         }
-        var userData = {
+        let userData = {
             evt: 'timer',
             condition_type: 'timer',
             wait_time: result.events[i].time - result.events[i-1].time
         };
-        var c = connCreate(
+        let c = connCreate(
             nodes[i-1].getHybridPort(fromPort),
             nodes[i].getHybridPort(toPort),
             userData
@@ -1228,14 +1230,14 @@ $('#nodeLinkPanelX').click(function(){
 });
 
 $('#workflowToolbarAddNode').click(function(){
-    var heights = canvas.getFigures().clone().map(function(f){ return f.getAbsoluteY();});
-    var y = Math.max.apply(Math,heights.asArray()) + 80;
+    let heights = canvas.getFigures().clone().map(function(f){ return f.getAbsoluteY();});
+    let y = Math.max.apply(Math,heights.asArray()) + 80;
 
-    var node = addNode({
+    let node = addNode({
       evt: 'end_recording',
       time: 0
     })
-    var command = new draw2d.command.CommandAdd(canvas, node, 775, y);
+    let command = new draw2d.command.CommandAdd(canvas, node, 775, y);
     canvas.getCommandStack().execute(command);
 
     nodes.push(node);
@@ -1268,13 +1270,13 @@ function favoriteSwal() {
         }
         chrome.storage.local.get('favorites', function (result) {
             chrome.storage.local.get('workflow', function (workflow) {
-                var favorites = result.favorites;
+                let favorites = result.favorites;
                 if (!Array.isArray(favorites)) { // for safety only
                     favorites = [];
                 }
 
-                for (var i=0; i<favorites.length; i++) {
-                    if (favorites[i].name == inputValue.trim()) {
+                for (let i=0; i<favorites.length; i++) {
+                    if (favorites[i].name === inputValue.trim()) {
                         swal("Error", "You already have a workflow with the same name", "error");
                         return false;
                     }
@@ -1359,10 +1361,10 @@ function cloudUploadSwal() {
 }
 
 function cloneSelection() {
-    var cloneNodes = [];
-    var retry = true;
-    var offset = 0;
-    var selection = new draw2d.util.ArrayList();
+    let cloneNodes = [];
+    let retry = true;
+    let offset = 0;
+    let selection = new draw2d.util.ArrayList();
 
     while (retry && offset < 8000) {
         retry = false;
@@ -1374,12 +1376,12 @@ function cloneSelection() {
     }
 
     canvas.getSelection().each(function(i,fig){
-        if (fig.cssClass == "CustomNode") {
-            if (fig.userData.evt == "begin_recording")
+        if (fig.cssClass === "CustomNode") {
+            if (fig.userData.evt === "begin_recording")
                 return;
-            var node = fig.clone();
+            let node = fig.clone();
             node.setResizeable(false);
-            for (var i=0; i<node.hybridPorts.data.length; i++) {
+            for (let i=0; i<node.hybridPorts.data.length; i++) {
                 node.hybridPorts.data[i].userData.clonedFrom = fig.hybridPorts.data[i].id;
             }
             node.userData.clonedFrom = fig.id;
@@ -1387,33 +1389,33 @@ function cloneSelection() {
             canvas.add(node, fig.x, fig.y+offset);
             nodes.push(node);
             selection.add(node);
-        } else if (fig.cssClass == "CustomSection") {
-            var section = fig.clone();
+        } else if (fig.cssClass === "CustomSection") {
+            let section = fig.clone();
             canvas.add(section, fig.x, fig.y+offset);
             selection.add(section);
         }
     });
     canvas.getSelection().each(function(i,fig){
-        if (fig.cssClass == "draw2d_Connection") {
-            var source = false;
-            var dest = false;
+        if (fig.cssClass === "draw2d_Connection") {
+            let source = false;
+            let dest = false;
 
-            for (var i=0; i<cloneNodes.length; i++) {
+            for (let i=0; i<cloneNodes.length; i++) {
                 if (cloneNodes[i].hybridPorts) {
-                    for (var j=0; j<cloneNodes[i].hybridPorts.data.length; j++) {
-                        if (fig.sourcePort.parent.userData.evt == "begin_recording")
+                    for (let j=0; j<cloneNodes[i].hybridPorts.data.length; j++) {
+                        if (fig.sourcePort.parent.userData.evt === "begin_recording")
                             return;
-                        if (fig.targetPort.parent.userData.evt == "begin_recording")
+                        if (fig.targetPort.parent.userData.evt === "begin_recording")
                             return;
-                        if (fig.sourcePort.id == cloneNodes[i].hybridPorts.data[j].userData.clonedFrom)
+                        if (fig.sourcePort.id === cloneNodes[i].hybridPorts.data[j].userData.clonedFrom)
                             source = cloneNodes[i].hybridPorts.data[j];
-                        if (fig.targetPort.id == cloneNodes[i].hybridPorts.data[j].userData.clonedFrom)
+                        if (fig.targetPort.id === cloneNodes[i].hybridPorts.data[j].userData.clonedFrom)
                             dest = cloneNodes[i].hybridPorts.data[j];
                     }
                 }
             }
 
-            var newLink = connCreate(source,dest,fig.userData);
+            let newLink = connCreate(source,dest,fig.userData);
             links.push(newLink);
             canvas.add(newLink);
             selection.add(newLink);
@@ -1445,8 +1447,8 @@ $('#workflowToolbarRedo').click(function(){
 });
 
 function openTour1_1() {
-    var enjoyhint_instance = new EnjoyHint({});
-    var enjoyhint_script_steps = [
+    let enjoyhint_instance = new EnjoyHint({});
+    let enjoyhint_script_steps = [
       {
         'click #workflowToolbarInitSimulation': 'This is the workflow we just created.<br />It has many events (circles) and links (arrows).<br /><br />The final step is to click the play button to start a simulation.<br />Once it\'s running, simply watch and relax.',
         showSkip: false
@@ -1475,8 +1477,8 @@ function scrollOverrides() {
         return pageYOffset;
       }
       else {
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
+        let B = document.body; //IE 'quirks'
+        let D = document.documentElement; //IE with doctype
         D = (D.clientHeight) ? D : B;
         return D.scrollTop;
       }
@@ -1488,8 +1490,8 @@ function scrollOverrides() {
         return pageXOffset;
       }
       else {
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
+        let B = document.body; //IE 'quirks'
+        let D = document.documentElement; //IE with doctype
         D = (D.clientHeight) ? D : B;
         return D.scrollLeft;
       }
@@ -1497,14 +1499,14 @@ function scrollOverrides() {
 }
 
 /* From simulate */
-var message_port = chrome.runtime.connect({name: "sim"});
+let message_port = chrome.runtime.connect({name: "sim"});
 send_message({action: "getstate"});
 message_port.onMessage.addListener(function(msg) {
-    if (msg.type == "state") {
-        if (msg.state == "terminated") {
+    if (msg.type === "state") {
+        if (msg.state === "terminated") {
             updateNodeProcessIcon(msg.nodeid, "stop");
         }
-    } else if (msg.type == "nodestatus") {
+    } else if (msg.type === "nodestatus") {
         updateNodeProcessIcon(msg.nodeid, msg.status);
     }
 });
@@ -1520,9 +1522,9 @@ function send_message(msg) {
 
 function clearProcessIcons() {
   canvas.getFigures().each(function(i, o) {
-      var children = o.getChildren();
+      let children = o.getChildren();
       if (children.data) {
-          for (var j=0; j<children.data.length; j++) {
+          for (let j=0; j<children.data.length; j++) {
               if (children.data[j].userData) {
                   if (children.data[j].userData.isProgressFigure) {
                       canvas.remove(children.data[j]);
@@ -1536,19 +1538,19 @@ function clearProcessIcons() {
 }
 
 function updateNodeProcessIcon(nodeid, status) {
-  var custom, node;
+  let custom, node;
 
-  if (status == "pending") {
+  if (status === "pending") {
       custom = new CustomPending();
-  } else if (status == "tick") {
+  } else if (status === "tick") {
       custom = new CustomTick();
-  } else if (status == "cross") {
+  } else if (status === "cross") {
       custom = new CustomCross();
-  } else if (status == "stop") {
+  } else if (status === "stop") {
       custom = new CustomStop();
   }
-  for (var i=0; i<nodes.length; i++) {
-      if (nodes[i].id !== undefined && nodes[i].id == nodeid) {
+  for (let i=0; i<nodes.length; i++) {
+      if (nodes[i].id !== undefined && nodes[i].id === nodeid) {
           node = nodes[i];
           break;
       }
