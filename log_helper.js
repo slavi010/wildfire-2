@@ -654,7 +654,7 @@ function populateEvents(result) {
             innerHTML += "</td>";
         }
 
-        var eventNode = document.createElement("tr");
+        let eventNode = document.createElement("tr");
         eventNode.innerHTML = innerHTML;
         eventNode.id = "eventRow" + i;
         document.getElementById('events').appendChild(eventNode);
@@ -673,9 +673,9 @@ function populateEvents(result) {
 }
 
 function populateSimulationEvents(result) {
-    var events = result.events;
-    var simulation_log = result.log;
-    var rows_height = 0;
+    let events = result.events;
+    let simulation_log = result.log;
+    let rows_height = 0;
     document.getElementById('events').innerHTML = ""; // reset table
 
     recording_start_time = events[0].time;

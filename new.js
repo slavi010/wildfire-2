@@ -1,5 +1,5 @@
 function getUrlParams(url) {
-    var urlParams = {};
+    let urlParams = {};
     url.replace(
         new RegExp("([^?=&]+)(=([^&]*))?", "g"),
         function($0, $1, $2, $3) {
@@ -10,10 +10,10 @@ function getUrlParams(url) {
     return urlParams;
 }
 
-var urlparams = getUrlParams(window.location.href);
+let urlparams = getUrlParams(window.location.href);
 
 if (urlparams.run) {
     console.log("Running");
-    var message_port = chrome.runtime.connect({name: "sim"});
+    let message_port = chrome.runtime.connect({name: "sim"});
     console.log(message_port.postMessage({action: "start_sim"}));
 }

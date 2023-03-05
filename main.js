@@ -40,20 +40,20 @@ chrome.commands.onCommand.addListener(function(command) {
         });
     } else {
         chrome.storage.local.get('favorites', function (result) {
-            var favorites = result.favorites;
-            var index = false;
+            let favorites = result.favorites;
+            let index = false;
             for (var i=0; i<favorites.length; i++) {
-                if (command == "play-workflow-1" && favorites[i].shortcut == "1") {
+                if (command == "play-workflow-1" && favorites[i].shortcut === "1") {
                     index = i;
                     chrome.windows.getCurrent({populate: true}, function(curr_window) {
                         begin_fav_sim(index, curr_window);
                     });
-                } else if (command == "play-workflow-2" && favorites[i].shortcut == "2") {
+                } else if (command == "play-workflow-2" && favorites[i].shortcut === "2") {
                     index = i;
                     chrome.windows.getCurrent({populate: true}, function(curr_window) {
                         begin_fav_sim(index, curr_window);
                     });
-                } else if (command == "play-workflow-3" && favorites[i].shortcut == "3") {
+                } else if (command == "play-workflow-3" && favorites[i].shortcut === "3") {
                     index = i;
                     chrome.windows.getCurrent({populate: true}, function(curr_window) {
                         begin_fav_sim(index, curr_window);
@@ -72,9 +72,9 @@ function sendNativeMessage(message) {
 
 function onNativeMessage(message) {
     nativeRetries = 0;
-    if (message['action'] == "init") {
+    if (message['action'] === "init") {
         helperversion = message['response']['helperversion'];
-    } else if (message['action'] == "screenshot") {
+    } else if (message['action'] === "screenshot") {
         latestNativeScreenshotParts.push(message['response']['image']);
         if (message['response']['lastpart']) {
             latestNativeScreenshot = new Image();
@@ -99,7 +99,7 @@ function nativeConnect() {
     native_port = chrome.runtime.connectNative("ai.wildfire");
     native_port.onMessage.addListener(onNativeMessage);
     native_port.onDisconnect.addListener(onNativeDisconnected);
-    var manifest = chrome.runtime.getManifest();
+    let manifest = chrome.runtime.getManifest();
     sendNativeMessage({
         'action': 'init',
         'version': manifest.version.toString()
@@ -107,7 +107,7 @@ function nativeConnect() {
 }
 
 setInterval(function(){
-    if (native_port == null)
+    if (native_port === null)
         nativeConnect();
 }, 30000);
 
@@ -116,9 +116,9 @@ nativeConnect();
 // Alarms
 
 chrome.alarms.onAlarm.addListener(function(alarm){
-    var name = alarm.name;
-    var name_parts = name.split("_");
-    if (name.startsWith("scheduled_") && (name_parts.length == 2 || name_parts[2].includes(String(new Date().getDay())))) {
+    let name = alarm.name;
+    let name_parts = name.split("_");
+    if (name.startsWith("scheduled_") && (name_parts.length === 2 || name_parts[2].includes(String(new Date().getDay())))) {
         chrome.notifications.create("beginning_scheduled_sim",{
             type: "basic",
             title: "Wildfire",
@@ -135,8 +135,8 @@ chrome.alarms.onAlarm.addListener(function(alarm){
 function configureAlarms() {
     chrome.alarms.clearAll(function(){
         chrome.storage.local.get('scheduled', function (result) {
-            var options;
-            var scheduled = result.scheduled;
+            let options;
+            let scheduled = result.scheduled;
 
             if (!Array.isArray(scheduled)) {
                 scheduled = [];
@@ -151,7 +151,7 @@ function configureAlarms() {
                     };
                     if (scheduled[i].repeat!=0)
                         options['periodInMinutes'] = parseInt(scheduled[i].repeat);
-                    var days = "";
+                    let days = "";
                     if (scheduled[i].sunday!==false)
                         days += "0";
                     if (scheduled[i].monday!==false)
@@ -182,16 +182,16 @@ function updateTrackedTabs() {
 }
 
 function resolveChar(str) {
-    var charInt = parseInt(resolveVariable(str));
+    let charInt = parseInt(resolveVariable(str));
 
-    if (charInt == 190)
+    if (charInt === 190)
         return ".";
     
     return String.fromCharCode(charInt);
 }
 
 function resolveVariable(str) {
-    var ret = eresolveVariable(String(str).replace("\\","\\\\").replace("\`","\\\`"));
+    let ret = eresolveVariable(String(str).replace("\\","\\\\").replace("\`","\\\`"));
     //console.log("Resolved " + str + " to " + ret);
     return ret;
 }
@@ -199,7 +199,7 @@ function resolveVariable(str) {
 function eresolveVariable(str) {
     try {
         String.prototype.isAlNumUnderscore = function() {
-            var regExp = /^[A-Za-z0-9_]+$/;
+            let regExp = /^[A-Za-z0-9_]+$/;
             return (this.match(regExp));
         };
 
@@ -211,13 +211,13 @@ function eresolveVariable(str) {
         if (str.length > 1024)
             return "";
 
-        if (str[0] != '$')
+        if (str[0] !== '$')
             return String(str[0]) + eresolveVariable(str.substring(1));
-        if (str[1] == '$')
+        if (str[1] === '$')
             return "$" + eresolveVariable(str.substring(2));
         
-        var i = 2;
-        var varname = false;
+        let i = 2;
+        let varname = false;
         while (!varname) {
             if (i > str.length)
                 varname = str.substring(1,i-1);
@@ -256,14 +256,14 @@ function updateWorkflowData() {
                     });
                     reject();
                 } else if (workflow.workflow) {
-                    var wfobj = JSON.parse(decrypt(workflow.workflow));
-                    var canvas_elements = wfobj.canvas;
+                    let wfobj = JSON.parse(decrypt(workflow.workflow));
+                    let canvas_elements = wfobj.canvas;
                     
                     nodes = [];
                     links = [];
 
                     for (var i=0; i<canvas_elements.length; i++) {
-                        if (canvas_elements[i].type == "draw2d.Connection")
+                        if (canvas_elements[i].type === "draw2d.Connection")
                             links.push(canvas_elements[i]);
                         else
                             nodes.push(canvas_elements[i]);
@@ -311,7 +311,7 @@ function openUI(url) {
 }
 
 function updateWorkflowDataToFavorite(favorite_index) {
-    if (favorite_index == -1)
+    if (favorite_index === -1)
         return updateWorkflowData();
 	return new Promise(function(resolve,reject){
 		chrome.storage.local.get('favorites', function (favorites) {
@@ -322,7 +322,7 @@ function updateWorkflowDataToFavorite(favorite_index) {
 			links = [];
 
 			for (var i=0; i<canvas_elements.length; i++) {
-				if (canvas_elements[i].type == "draw2d.Connection")
+				if (canvas_elements[i].type === "draw2d.Connection")
 					links.push(canvas_elements[i]);
 				else
 					nodes.push(canvas_elements[i]);
@@ -335,13 +335,13 @@ function updateWorkflowDataToFavorite(favorite_index) {
 }
 
 chrome.notifications.onClicked.addListener(function(notificationId){
-    if (notificationId == "no_workflow_available") {
+    if (notificationId === "no_workflow_available") {
         openUI("workfloweditor.html");
-    } else if (notificationId == "sim_complete") {
+    } else if (notificationId === "sim_complete") {
         openUI("simulations.html#0");
-    } else if (notificationId == "no_recorded_events") {
+    } else if (notificationId === "no_recorded_events") {
         openUI("docs/getting_started.html");
-    } else if (notificationId == "event_log_imported") {
+    } else if (notificationId === "event_log_imported") {
         openUI("eventlog.html");
     }
 });
@@ -351,13 +351,13 @@ chrome.tabs.onActivated.addListener(
         chrome.storage.local.get('recording', function (isRecording) {
             if (isRecording.recording) {
                 setTimeout(function() { // delay to ensure tabremove goes first
-                    if (events[events.length-1].evt == "tabremove" || (events[events.length-1].evt == "tabchange" && events[events.length-1].evt_data.id == activeInfo.tabId)) // ignore double events
+                    if (events[events.length-1].evt === "tabremove" || (events[events.length-1].evt === "tabchange" && events[events.length-1].evt_data.id === activeInfo.tabId)) // ignore double events
                         return;
 
-                    var tab_index = -1;
-                    var tab_url = "";
+                    let tab_index = -1;
+                    let tab_url = "";
                     for (var i=0; i<tracked_tabs.length; i++) {
-                        if (tracked_tabs[i].id == activeInfo.tabId) {
+                        if (tracked_tabs[i].id === activeInfo.tabId) {
                             tab_index = tracked_tabs[i].index;
                             tab_url = tracked_tabs[i].url;
                         }
@@ -386,12 +386,12 @@ chrome.tabs.onRemoved.addListener(
     function (tabId, removeInfo) {
         chrome.storage.local.get('recording', function (isRecording) {
             if (isRecording.recording) {
-                var tab_index = -1;
-                var tab_url = "";
-                var tab_active = 0;
+                let tab_index = -1;
+                let tab_url = "";
+                let tab_active = 0;
 
                 for (var i=0; i<tracked_tabs.length; i++) {
-                    if (tracked_tabs[i].id == tabId) {
+                    if (tracked_tabs[i].id === tabId) {
                         tab_index = tracked_tabs[i].index;
                         tab_url = tracked_tabs[i].url;
                         tab_active = tracked_tabs[i].active;
@@ -421,13 +421,13 @@ chrome.tabs.onUpdated.addListener(
 		if (!tab.url.startsWith("chrome-extension://" + chrome.runtime.id) && !tab.url.startsWith("moz-extension://" + chrome.runtime.id)) {
 			chrome.storage.local.get('recording', function (isRecording) {
 				if (isRecording.recording) {
-					if (changeInfo.status == 'loading') {
+					if (changeInfo.status === 'loading') {
                         events.push({
                             tab: tab,
                             evt: 'tabchange',
                             evt_data: {
                                 id: tabId,
-                                newtab: (tab.url == "chrome://newtab/" || tab.url == "about:newtab" || tab.url == "chrome://startpage/"),
+                                newtab: (tab.url === "chrome://newtab/" || tab.url === "about:newtab" || tab.url === "chrome://startpage/"),
                                 openerTabId: changeInfo.openerTabId,
                                 url: tab.url,
                                 active: tab.active,
@@ -455,7 +455,7 @@ chrome.tabs.onReplaced !== undefined && chrome.tabs.onReplaced.addListener( // P
                             evt: 'tabchange',
                             evt_data: {
                                 id: tab.id,
-                                newtab: (tab.url == "chrome://newtab/"),
+                                newtab: (tab.url === "chrome://newtab/"),
                                 openerTabId: tab.id,
                                 url: tab.url,
                                 active: tab.active,
@@ -512,7 +512,7 @@ function updateNativeRecordingStatus() {
 
 function updateEvents() {
     chrome.storage.local.get('events', function (result) {
-        var new_events = result.events;
+        let new_events = result.events;
         if (!Array.isArray(new_events)) { // for safety only
             new_events = [];
         }
@@ -526,7 +526,7 @@ function updateProxy() {
 			if (proxy.proxy.clear)
 				chrome.proxy.settings.clear({});
 			else {
-				if (proxy.proxy.username && proxy.proxy.username != "") {
+				if (proxy.proxy.username && proxy.proxy.username !== "") {
 					proxyAuthEnable = true;
 					proxyUsername = proxy.proxy.username;
 					proxyPassword = proxy.proxy.password;
@@ -570,23 +570,23 @@ chrome.webRequest.onAuthRequired !== undefined && chrome.webRequest.onAuthRequir
 );
 
 chrome.storage.onChanged.addListener(function(changes, namespace) {
-	if (changes.recording != undefined) {
+	if (changes.recording !== undefined) {
     	updateExtIcon();
         updateTrackedTabs();
         updateNativeRecordingStatus();
 	}
-    if (changes.settings != undefined) {
+    if (changes.settings !== undefined) {
 		updateBgSettings();
 		setContextMenus();
 	}
-	if (changes.proxy != undefined)
+	if (changes.proxy !== undefined)
 		updateProxy();
-	if (changes.favorites != undefined)
+	if (changes.favorites !== undefined)
 		setContextMenus();
-    if (changes.scheduled != undefined)
+    if (changes.scheduled !== undefined)
 		configureAlarms();
-    if (changes.events != undefined) {
-        if (changes.events.newValue.length != events.length) {
+    if (changes.events !== undefined) {
+        if (changes.events.newValue.length !== events.length) {
             updateEvents();
         }
     }
@@ -599,14 +599,14 @@ configureAlarms();
 updateEvents();
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.action == "addEvent") {
+    if (request.action === "addEvent") {
         events.push({
             evt: request.evt,
             evt_data: request.evt_data,
             time: request.time
         });
         chrome.storage.local.set({events: events});
-    } else if (request.action == "loadCloudWorkflow") {
+    } else if (request.action === "loadCloudWorkflow") {
         chrome.storage.local.set({events: '{"events":[{"evt":"begin_recording","evt_data":{},"time":0},{"evt":"end_recording","evt_data":{},"time":1}]}'},function(){
             chrome.storage.local.set({workflow: request.workflow},function(){
                 chrome.windows.getCurrent({populate: true}, function(curr_window) {
@@ -614,7 +614,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 });
             });
         });
-    } else if (request.action == "getHelperStatus") {
+    } else if (request.action === "getHelperStatus") {
         sendResponse({
             'native_port': native_port,
             'helperversion': helperversion,
@@ -625,9 +625,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 /*
 (function(history){
-    var pushState = history.pushState;
+    let pushState = history.pushState;
     history.pushState = function(state) {
-        if (typeof history.onpushstate == "function") {
+        if (typeof history.onpushstate === "function") {
             history.onpushstate({state: state});
         }
         events.push({
@@ -643,8 +643,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 if (typeof InstallTrigger === 'undefined') { // NOT Firefox
     chrome.runtime.onMessageExternal.addListener(function(request, sender, sendResponse) {
-        if (request.action == "registrationStatus") {
-            if (bgSettings != null) {
+        if (request.action === "registrationStatus") {
+            if (bgSettings !== null) {
                 sendResponse({
                     "success": true,
                     "account": bgSettings.account,
@@ -657,9 +657,9 @@ if (typeof InstallTrigger === 'undefined') { // NOT Firefox
                     "version": chrome.runtime.getManifest().version
                 });
             }
-        } else if (request.action == "openExtension") {
-            var windowWidth = 1280;
-            var windowHeight = 800;
+        } else if (request.action === "openExtension") {
+            let windowWidth = 1280;
+            let windowHeight = 800;
             chrome.windows.create({
                 url: chrome.extension.getURL(request.url),
                 type: "popup",
@@ -668,7 +668,7 @@ if (typeof InstallTrigger === 'undefined') { // NOT Firefox
                 left: screen.width/2-(windowWidth/2),
                 top: screen.height/2-(windowHeight/2)
             });
-        } else if (request.action == "registerExtension") {
+        } else if (request.action === "registerExtension") {
             chrome.storage.local.get('settings', function (settings) {
                 bgSettings = settings.settings;
                 bgSettings.account = request.account;
@@ -685,7 +685,7 @@ if (typeof InstallTrigger === 'undefined') { // NOT Firefox
 
 chrome.runtime.onInstalled !== undefined && chrome.runtime.onInstalled.addListener(function(details){ // special handling - not present in FF
     chrome.storage.local.set({simulating: false});    
-    if (details.reason == "install") {
+    if (details.reason === "install") {
         if (navigator.userAgent.includes("Wildfire")) {
             if (typeof InstallTrigger !== 'undefined') { // Firefox
                 setTimeout(function(){
@@ -701,8 +701,8 @@ chrome.runtime.onInstalled !== undefined && chrome.runtime.onInstalled.addListen
         } else {
             openUI("docs/getting_started.html");
         }
-    } else if (details.reason == "update") {
-        var thisVersion = chrome.runtime.getManifest().version;
+    } else if (details.reason === "update") {
+        let thisVersion = chrome.runtime.getManifest().version;
         /*chrome.notifications.create("",{
             type: "basic",
             title: "Wildfire",
@@ -716,7 +716,7 @@ chrome.runtime.onInstalled !== undefined && chrome.runtime.onInstalled.addListen
 
 function setContextMenus() {
 	chrome.storage.local.get('favorites', function (result) {
-        var favorites = result.favorites;
+        let favorites = result.favorites;
         if (!Array.isArray(favorites)) { // for safety only
             favorites = [];
         }
@@ -827,7 +827,7 @@ function getNodeById(nodeid) {
 	var node = null;
 
 	for (var i=0; i<nodes.length; i++) {
-		if (nodes[i].id == nodeid) {
+		if (nodes[i].id === nodeid) {
 			node = nodes[i];
 			break;
 		}
@@ -839,16 +839,16 @@ function getNodeById(nodeid) {
 if (typeof InstallTrigger !== 'undefined') { // Firefox
     browser.runtime.onConnect.addListener(function(new_port) {
         port = new_port;
-        if (port.name == "sim") {
+        if (port.name === "sim") {
             port.onMessage.addListener(function(msg) {
-                if (msg.action == "getstate") {
+                if (msg.action === "getstate") {
                     send_message({
                         type: "state",
                         state: "running"
                     });
-                } else if (msg.action == "begin_sim") {
+                } else if (msg.action === "begin_sim") {
                     begin_sim();
-                } else if (msg.action == "stop_sim") {
+                } else if (msg.action === "stop_sim") {
                     terminateSimulation(false, "User terminated");
                 }
             });
@@ -857,16 +857,16 @@ if (typeof InstallTrigger !== 'undefined') { // Firefox
 } else {
     chrome.runtime.onConnect.addListener(function(new_port) {
         port = new_port;
-        if (port.name == "sim") {
+        if (port.name === "sim") {
             port.onMessage.addListener(function(msg) {
-                if (msg.action == "getstate") {
+                if (msg.action === "getstate") {
                     send_message({
                         type: "state",
                         state: "running"
                     });
-                } else if (msg.action == "begin_sim") {
+                } else if (msg.action === "begin_sim") {
                     begin_sim();
-                } else if (msg.action == "stop_sim") {
+                } else if (msg.action === "stop_sim") {
                     terminateSimulation(false, "User terminated");
                 }
             });
@@ -875,7 +875,7 @@ if (typeof InstallTrigger !== 'undefined') { // Firefox
 }
 
 function generatePassphrase() {
-  var ret = "3ur9";
+  let ret = "3ur9";
   ret += "480tvb4";
   ret += "39f83r8";
   return ret;
@@ -921,10 +921,10 @@ function begin_fav_sim(fav_index, curr_window) {
 	    chrome.browserAction.setBadgeText({ text: "SIM" });
         chrome.browserAction.setBadgeBackgroundColor({ color: "#00CC66" });
 
-        var node;
+        let node;
 
         for (var i=0; i<nodes.length; i++) {
-            if (nodes[i].userData.evt == "begin_recording") {
+            if (nodes[i].userData.evt === "begin_recording") {
                 node = nodes[i];
                 break;
             }
@@ -961,7 +961,7 @@ function begin_sim_with_option(fav_index) {
 
 		var url = chrome.extension.getURL("new.html");
 		
-        var window_options = {
+        let window_options = {
 			"url":url,
 			"left":0,
 			"top":0,
@@ -1008,18 +1008,18 @@ function begin_sim_with_option(fav_index) {
 
             if (fav_index==-1) {
                 updateWorkflowData().then(function(){
-                    var node;
+                    let node;
 
                     for (var i=0; i<nodes.length; i++) {
-                        if (nodes[i].userData.evt == "begin_recording") {
+                        if (nodes[i].userData.evt === "begin_recording") {
                             node = nodes[i];
                             break;
                         }
                     }
 
                     setTimeout(function(node){ // allow time for simulation window to open
-                        if (events[1].evt != "tabchange" && events[1].evt_data.url && events[1].evt_data.url.length > 8) {
-                            var initurl = events[1].evt_data.url;
+                        if (events[1].evt !== "tabchange" && events[1].evt_data.url && events[1].evt_data.url.length > 8) {
+                            let initurl = events[1].evt_data.url;
                             if (typeof InstallTrigger === 'undefined') { // NOT Firefox
                                 chrome.tabs.query({windowId: new_window.id}, function(tabs){
                                     chrome.tabs.update(tabs[0].id,{url: initurl});
@@ -1047,18 +1047,18 @@ function begin_sim_with_option(fav_index) {
                 });
             } else {
                 updateWorkflowDataToFavorite(fav_index).then(function(){
-                    var node;
+                    let node;
 
                     for (var i=0; i<nodes.length; i++) {
-                        if (nodes[i].userData.evt == "begin_recording") {
+                        if (nodes[i].userData.evt === "begin_recording") {
                             node = nodes[i];
                             break;
                         }
                     }
 
                     setTimeout(function(node){ // allow time for simulation window to open
-                        if (events[1].evt != "tabchange" && events[1].evt_data.url && events[1].evt_data.url.length > 8) {
-                            var initurl = events[1].evt_data.url;
+                        if (events[1].evt !== "tabchange" && events[1].evt_data.url && events[1].evt_data.url.length > 8) {
+                            let initurl = events[1].evt_data.url;
                             if (typeof InstallTrigger === 'undefined') { // NOT Firefox
                                 chrome.tabs.query({windowId: new_window.id}, function(tabs){
                                     chrome.tabs.update(tabs[0].id,{url: initurl});
@@ -1088,7 +1088,7 @@ function begin_sim_with_option(fav_index) {
 }
 
 function closeListenerCallback(closed_window_id) {
-	if (closed_window_id == new_window.id) {
+	if (closed_window_id === new_window.id) {
 		terminateSimulation(false, "Simulation terminated");
 	}
 }
@@ -1114,8 +1114,8 @@ function processOCR(imagedata, node, resolve, reject) {
     }).then(function(tessaresult){
         console.log(tessaresult);
 
-        var fuzz = FuzzySet();
-        var bestmatch = null;
+        let fuzz = FuzzySet();
+        let bestmatch = null;
         if (node.userData.evt_data.useFuzzyMatch) {
             for (var i=0; i<tessaresult.words.length; i++) {
                 fuzz.add(tessaresult.words[i].text);
@@ -1123,10 +1123,10 @@ function processOCR(imagedata, node, resolve, reject) {
             bestmatch = fuzz.get(node.userData.evt_data.ocrsearchterm, null, 0.3);
         }
 
-        var word_matches = [];
+        let word_matches = [];
         for (var i=0; i<tessaresult.words.length; i++) {
             if (node.userData.evt_data.useFuzzyMatch) {
-                if (bestmatch && bestmatch[0][1] == tessaresult.words[i].text) {
+                if (bestmatch && bestmatch[0][1] === tessaresult.words[i].text) {
                     word_matches.push(tessaresult.words[i]);
                     break;
                 }
@@ -1136,7 +1136,7 @@ function processOCR(imagedata, node, resolve, reject) {
         }
         
         if (word_matches.length > 0) {
-            var matchtext = "";
+            let matchtext = "";
             if (node.userData.evt_data.useFuzzyMatch) {
                 matchtext = "\"" + bestmatch[0][1] + "\" (" + parseInt(bestmatch[0][0]*100) + "% match)";
             } else {
@@ -1187,7 +1187,7 @@ function logResultAndRaceLinks(result, failure, node) {
 	// Process result
 	simulation_log.push(result);
 
-	if (node.userData.evt == "end_recording") {
+	if (node.userData.evt === "end_recording") {
 		send_message({
 			type: "nodestatus",
 			nodeid: node.id,
@@ -1201,23 +1201,23 @@ function logResultAndRaceLinks(result, failure, node) {
 
 	var nodeConnectionPromises = [];
 	for (var i=0; i<links.length; i++) {
-		if (links[i].source.node == node.id) {
+		if (links[i].source.node === node.id) {
 			nodeConnectionPromises.push(
 				new Promise(function(resolve, reject) {
-					if (links[i].userData.evt == "timer") {
-                        var wait_time = 0;
+					if (links[i].userData.evt === "timer") {
+                        let wait_time = 0;
                         if (isNaN(parseFloat(links[i].userData.wait_time)))
                             wait_time = Number(resolveVariable(links[i].userData.wait_time)) * 1000;
                         else
                             wait_time = links[i].userData.wait_time;
 						setTimeout(resolve, wait_time, links[i]);
-					} else if (links[i].userData.evt == "wait_for_element") {
+					} else if (links[i].userData.evt === "wait_for_element") {
 						waitForElement(resolve, resolveVariable(links[i].userData.csspath), links[i]);
-					} else if (links[i].userData.evt == "wait_for_title") {
+					} else if (links[i].userData.evt === "wait_for_title") {
 						waitForTitle(resolve, resolveVariable(links[i].userData.title), links[i]);
-                    } else if (links[i].userData.evt == "test_expression") {
+                    } else if (links[i].userData.evt === "test_expression") {
 						testExpression(resolve, links[i].userData.expr, links[i]);
-					} else if (links[i].userData.evt == "wait_for_time") {
+					} else if (links[i].userData.evt === "wait_for_time") {
 						waitForTime(resolve, links[i].userData.waittilltime, links[i]);
 					} else {
 						reject();
@@ -1227,7 +1227,7 @@ function logResultAndRaceLinks(result, failure, node) {
 		}
 	}
 	
-	if (nodeConnectionPromises.length == 0) {
+	if (nodeConnectionPromises.length === 0) {
 		if (failure)
 			send_message({
 				type: "nodestatus",
@@ -1277,7 +1277,7 @@ function execEvent(node) {
 		status: "pending"
 	});
 
-    var code = ";";
+    let code = ";";
 
     switch (node.userData.evt) {
         case 'begin_recording':
@@ -1314,8 +1314,8 @@ function execEvent(node) {
             if (bgSettings.simulatemousedown) {
                 if (node.userData.useOSInput) {
                     return new Promise(function(resolve, reject) {
-                        var clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
-                        var clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
+                        let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
+                        let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
                         
                         sendNativeMessage({
                             'action': 'mousedown',
@@ -1335,8 +1335,8 @@ function execEvent(node) {
 
                 if (node.userData.useDirectInput) {
                     return new Promise(function(resolve, reject) {
-                        var clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
-                        var clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
+                        let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
+                        let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
                         if (node.userData.evt_data.clientX==0 && node.userData.evt_data.clientY==0 && node.userData.evt_data.csspath!="") {
                             code = "$.extend($('" + resolveVariable(node.userData.evt_data.csspath) + "').offset(),{width: $('" + resolveVariable(node.userData.evt_data.csspath) + "').width(), height: $('" + resolveVariable(node.userData.evt_data.csspath) + "').height()});";
                         } else {
@@ -1384,8 +1384,8 @@ function execEvent(node) {
             if (bgSettings.simulatemouseup) {
                 if (node.userData.useOSInput) {
                     return new Promise(function(resolve, reject) {
-                        var clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
-                        var clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
+                        let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
+                        let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
                         
                         sendNativeMessage({
                             'action': 'mouseup',
@@ -1405,8 +1405,8 @@ function execEvent(node) {
 
                 if (node.userData.useDirectInput) {
                     return new Promise(function(resolve, reject) {
-                        var clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
-                        var clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
+                        let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
+                        let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
                         if (node.userData.evt_data.clientX==0 && node.userData.evt_data.clientY==0 && node.userData.evt_data.csspath!="") {
                             code = "$.extend($('" + resolveVariable(node.userData.evt_data.csspath) + "').offset(),{width: $('" + resolveVariable(node.userData.evt_data.csspath) + "').width(), height: $('" + resolveVariable(node.userData.evt_data.csspath) + "').height()});";
                         } else {
@@ -1467,8 +1467,8 @@ function execEvent(node) {
             if (bgSettings.simulateclick) {
                 if (node.userData.useOSInput) {
                     return new Promise(function(resolve, reject) {
-                        var clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
-                        var clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
+                        let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
+                        let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
                         
                         sendNativeMessage({
                             'action': 'click',
@@ -1489,8 +1489,8 @@ function execEvent(node) {
 
                 if (node.userData.useDirectInput) {
                     return new Promise(function(resolve, reject) {
-                        var clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
-                        var clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
+                        let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
+                        let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
                         if (node.userData.evt_data.clientX==0 && node.userData.evt_data.clientY==0 && node.userData.evt_data.csspath!="") {
                             code = "$.extend($('" + resolveVariable(node.userData.evt_data.csspath) + "').offset(),{width: $('" + resolveVariable(node.userData.evt_data.csspath) + "').width(), height: $('" + resolveVariable(node.userData.evt_data.csspath) + "').height()});";
                         } else {
@@ -1521,16 +1521,16 @@ function execEvent(node) {
                 code = "";
 
                 if (node.userData.evt_data.downloadlinks)
-                    code += "if ($('" + resolveVariable(node.userData.evt_data.csspath) + "').prop('tagName') == 'A'){ var downloadattrstatus = $('" + resolveVariable(node.userData.evt_data.csspath) + "').attr('download'); $('" + resolveVariable(node.userData.evt_data.csspath) + "').attr('download',''); };"
+                    code += "if ($('" + resolveVariable(node.userData.evt_data.csspath) + "').prop('tagName') === 'A'){ let downloadattrstatus = $('" + resolveVariable(node.userData.evt_data.csspath) + "').attr('download'); $('" + resolveVariable(node.userData.evt_data.csspath) + "').attr('download',''); };"
 
-                if (node.userData.evt_data.button == 1) { // middle click
+                if (node.userData.evt_data.button === 1) { // middle click
                     code += "$('" + resolveVariable(node.userData.evt_data.csspath) + "')[0].dispatchEvent(new MouseEvent(\"click\",{\"button\": 1, \"which\": 1}));";
                 } else {
                     code += "$('" + resolveVariable(node.userData.evt_data.csspath) + "')[0].click();";
                 }
 
                 if (node.userData.evt_data.downloadlinks)
-                    code += "if ($('" + resolveVariable(node.userData.evt_data.csspath) + "').prop('tagName') == 'A'){ if (downloadattrstatus===undefined) { $('" + resolveVariable(node.userData.evt_data.csspath) + "').removeAttr('download'); }; };";
+                    code += "if ($('" + resolveVariable(node.userData.evt_data.csspath) + "').prop('tagName') === 'A'){ if (downloadattrstatus===undefined) { $('" + resolveVariable(node.userData.evt_data.csspath) + "').removeAttr('download'); }; };";
                 code += "true;";
             }
             break;
@@ -1739,7 +1739,7 @@ function execEvent(node) {
                             runCode(code, node).then(function(result){
                                 chrome.tabs.query({windowId: new_window.id, active: true}, function(tabs) {
                                     // TODO - deal with period char
-                                    if (result.results[0] == resolveVariable(node.userData.evt_data.value).slice(0, -1)) {
+                                    if (result.results[0] === resolveVariable(node.userData.evt_data.value).slice(0, -1)) {
                                         chrome.debugger.attach({ tabId: tabs[0].id }, "1.0");
                                         chrome.debugger.sendCommand({ tabId: tabs[0].id }, 'Input.dispatchKeyEvent', { unmodifiedText: node.userData.evt_data.value[node.userData.evt_data.value.length-1], text: node.userData.evt_data.value[node.userData.evt_data.value.length-1], type: 'rawKeyDown', windowsVirtualKeyCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), nativeVirtualKeyCode : (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), macCharCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0))  });
                                         chrome.debugger.sendCommand({ tabId: tabs[0].id }, 'Input.dispatchKeyEvent', { unmodifiedText: node.userData.evt_data.value[node.userData.evt_data.value.length-1], text: node.userData.evt_data.value[node.userData.evt_data.value.length-1], type: 'char', windowsVirtualKeyCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), nativeVirtualKeyCode : (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), macCharCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0))  });
@@ -1751,7 +1751,7 @@ function execEvent(node) {
                                             id: node.id,
                                             time: Date.now()
                                         });
-                                    } else if (result.results[0] == node.userData.evt_data.value) {
+                                    } else if (result.results[0] === node.userData.evt_data.value) {
                                         resolve({
                                             error: false,
                                             results: null,
@@ -1814,11 +1814,11 @@ function execEvent(node) {
         case 'purgecookies':
             return new Promise(function(resolve, reject) {
                 chrome.cookies.getAll({}, function(cookies){
-                    var cookiepurgeresults = [];
+                    let cookiepurgeresults = [];
                     for (var i=0; i<cookies.length; i++) {
                         if (cookies[i].domain.includes(resolveVariable(node.userData.evt_data.searchterm))) {
-                            var domain = cookies[i].domain;
-                            if (domain[0] == ".")
+                            let domain = cookies[i].domain;
+                            if (domain[0] === ".")
                                 domain = domain.substring(0);
                             cookiepurgeresults.push(domain);
                             domain = "https://" + domain;
@@ -1826,10 +1826,10 @@ function execEvent(node) {
                         }
                     }
 
-                    var cookieresults = "No cookies found for the search term provided";
+                    let cookieresults = "No cookies found for the search term provided";
                     if (cookiepurgeresults.length > 0) {
-                        var uniqueDomains = cookiepurgeresults.filter(function(item, pos) {
-                            return cookiepurgeresults.indexOf(item) == pos;
+                        let uniqueDomains = cookiepurgeresults.filter(function(item, pos) {
+                            return cookiepurgeresults.indexOf(item) === pos;
                         })
                         cookieresults = "Domains purged: " + uniqueDomains.join(", ");
                     }
@@ -1845,26 +1845,26 @@ function execEvent(node) {
         case 'tabremove':
             return new Promise(function(resolve, reject) {
                 function removeTab(tabs) {
-                    var removedTab = null;
+                    let removedTab = null;
 
                     for (var i=0; i<tabs.length; i++) {
-                        if (resolveVariable(node.userData.evt_data.method) == "active") {
+                        if (resolveVariable(node.userData.evt_data.method) === "active") {
                             if (tabs[i].active) {
                                 removedTab = i;
                                 chrome.tabs.remove(tabs[removedTab].id); // wrap it so it can remove multiple tabs
                             }
-                        } else if (resolveVariable(node.userData.evt_data.method) == "url") {
-                            if (tabs[i].url == resolveVariable(node.userData.evt_data.url)) {
+                        } else if (resolveVariable(node.userData.evt_data.method) === "url") {
+                            if (tabs[i].url === resolveVariable(node.userData.evt_data.url)) {
                                 removedTab = i;
                                 chrome.tabs.remove(tabs[removedTab].id);
                             }
-                        } else if (resolveVariable(node.userData.evt_data.method) == "index") {
-                            if (tabs[i].index == resolveVariable(node.userData.evt_data.index)) {
+                        } else if (resolveVariable(node.userData.evt_data.method) === "index") {
+                            if (tabs[i].index === resolveVariable(node.userData.evt_data.index)) {
                                 removedTab = i;
                                 chrome.tabs.remove(tabs[removedTab].id);
                             }
-                        } else if (resolveVariable(node.userData.evt_data.method) == "id") {
-                            if (tabs[i].id == resolveVariable(node.userData.evt_data.id)) {
+                        } else if (resolveVariable(node.userData.evt_data.method) === "id") {
+                            if (tabs[i].id === resolveVariable(node.userData.evt_data.id)) {
                                 removedTab = i;
                                 chrome.tabs.remove(tabs[removedTab].id);
                             }
@@ -1900,20 +1900,20 @@ function execEvent(node) {
         case 'tabswitch':
             return new Promise(function(resolve, reject) {
                 function switchTabs(tabs) {
-                    var newActiveTab = null;
+                    let newActiveTab = null;
 
                     for (var i=0; i<tabs.length; i++) {
-                        if (resolveVariable(node.userData.evt_data.method) == "active") {
+                        if (resolveVariable(node.userData.evt_data.method) === "active") {
                             if (tabs[i].active)
                                 newActiveTab = i;
-                        } else if (resolveVariable(node.userData.evt_data.method) == "url") {
-                            if (tabs[i].url == resolveVariable(node.userData.evt_data.url))
+                        } else if (resolveVariable(node.userData.evt_data.method) === "url") {
+                            if (tabs[i].url === resolveVariable(node.userData.evt_data.url))
                                 newActiveTab = i;
-                        } else if (resolveVariable(node.userData.evt_data.method) == "index") {
-                            if (tabs[i].index == resolveVariable(node.userData.evt_data.index))
+                        } else if (resolveVariable(node.userData.evt_data.method) === "index") {
+                            if (tabs[i].index === resolveVariable(node.userData.evt_data.index))
                                 newActiveTab = i;
-                        } else if (resolveVariable(node.userData.evt_data.method) == "id") {
-                            if (tabs[i].id == resolveVariable(node.userData.evt_data.id))
+                        } else if (resolveVariable(node.userData.evt_data.method) === "id") {
+                            if (tabs[i].id === resolveVariable(node.userData.evt_data.id))
                                 newActiveTab = i;
                         }
                     }
@@ -1950,9 +1950,9 @@ function execEvent(node) {
             });
         case 'tabchange':
             return new Promise(function(resolve, reject) {
-                var activeTab = 0;
+                let activeTab = 0;
 
-                var resolvedURL = resolveVariable(node.userData.evt_data.url);
+                let resolvedURL = resolveVariable(node.userData.evt_data.url);
 
                 if (!resolvedURL.startsWith("http") && !resolvedURL.startsWith("about") && !resolvedURL.startsWith("chrome") && !resolvedURL.startsWith("moz"))
                     resolvedURL = "http://" + resolvedURL;
@@ -1962,7 +1962,7 @@ function execEvent(node) {
                         if (tabs[i].active)
                             activeTab = i;
                     }
-                    if (node.userData.evt_data.newtab && tabs[activeTab].url != chrome.extension.getURL("new.html")) {
+                    if (node.userData.evt_data.newtab && tabs[activeTab].url !== chrome.extension.getURL("new.html")) {
                         chrome.tabs.create({
                             windowId: new_window.id,
                             url: resolvedURL
@@ -2094,10 +2094,10 @@ function execEvent(node) {
         case 'csvimport':
             return new Promise(function(resolve, reject) {
                 try {
-                    var rows = node.userData.evt_data.csvresults.data;
+                    let rows = node.userData.evt_data.csvresults.data;
                     for (var j=1; j<rows.length; j++) {
                         for (var k=0; k<rows[j].length; k++) {
-                            if (rows[0][k][0] != '_')
+                            if (rows[0][k][0] !== '_')
                                 simulation_variables[rows[0][k] + "." + j] = rows[j][k];
                         }
                     }
@@ -2119,7 +2119,7 @@ function execEvent(node) {
             });
         case 'setvar':
             return new Promise(function(resolve, reject) {
-                if (node.userData.evt_data.var[0] == '_')
+                if (node.userData.evt_data.var[0] === '_')
                     reject({
                         error: true,
                         results: ["Error processing expression: " + err.message],
@@ -2130,9 +2130,9 @@ function execEvent(node) {
                 if (node.userData.evt_data.usage === undefined) // was never initially set
                     node.userData.evt_data.usage = "expression";
 
-                if (node.userData.evt_data.usage == "expression") {
+                if (node.userData.evt_data.usage === "expression") {
                     try {
-                        var parser = new Parser();
+                        let parser = new Parser();
                         try {
                             simulation_variables[node.userData.evt_data.var] = parser.evaluate(node.userData.evt_data.expr,simulation_variables);
                         } catch(err) {
@@ -2152,7 +2152,7 @@ function execEvent(node) {
                             time: Date.now()
                         });
                     }
-                } else if (node.userData.evt_data.usage == "innertext") {
+                } else if (node.userData.evt_data.usage === "innertext") {
                     runCode("$('" + node.userData.evt_data.expr + "').text()", node).then(function(result){
                         simulation_variables[node.userData.evt_data.var] = result.results[0];
                         resolve({
@@ -2169,7 +2169,7 @@ function execEvent(node) {
                             time: Date.now()
                         });
                     });
-                } else if (node.userData.evt_data.usage == "attrval") {
+                } else if (node.userData.evt_data.usage === "attrval") {
                     runCode("$('" + node.userData.evt_data.expr + "').val()", node).then(function(result){
                         simulation_variables[node.userData.evt_data.var] = result.results[0];
                         resolve({
@@ -2186,7 +2186,7 @@ function execEvent(node) {
                             time: Date.now()
                         });
                     });
-                } else if (node.userData.evt_data.usage == "outerhtml") {
+                } else if (node.userData.evt_data.usage === "outerhtml") {
                     runCode("$('" + node.userData.evt_data.expr + "')[0].outerHTML", node).then(function(result){
                         simulation_variables[node.userData.evt_data.var] = result.results[0];
                         resolve({
@@ -2203,7 +2203,7 @@ function execEvent(node) {
                             time: Date.now()
                         });
                     });
-                } else if (node.userData.evt_data.usage == "elemattr") {
+                } else if (node.userData.evt_data.usage === "elemattr") {
                     runCode("$('" + node.userData.evt_data.expr + "')[0].getAttribute('" + node.userData.evt_data.attribute + "')", node).then(function(result){
                         simulation_variables[node.userData.evt_data.var] = result.results[0];
                         resolve({
@@ -2220,7 +2220,7 @@ function execEvent(node) {
                             time: Date.now()
                         });
                     });
-                } else if (node.userData.evt_data.usage == "urlparam") {
+                } else if (node.userData.evt_data.usage === "urlparam") {
                     runCode("QueryString." + node.userData.evt_data.expr, node).then(function(result){
                         simulation_variables[node.userData.evt_data.var] = result.results[0];
                         resolve({
@@ -2237,7 +2237,7 @@ function execEvent(node) {
                             time: Date.now()
                         });
                     });
-                } else if (node.userData.evt_data.usage == "title") {
+                } else if (node.userData.evt_data.usage === "title") {
                     runCode("document.title", node).then(function(result){
                         simulation_variables[node.userData.evt_data.var] = result.results[0];
                         resolve({
@@ -2254,7 +2254,7 @@ function execEvent(node) {
                             time: Date.now()
                         });
                     });
-                } else if (node.userData.evt_data.usage == "url") {
+                } else if (node.userData.evt_data.usage === "url") {
                     runCode("document.url", node).then(function(result){
                         simulation_variables[node.userData.evt_data.var] = result.results[0];
                         resolve({
@@ -2282,9 +2282,9 @@ function execEvent(node) {
             });
         case 'recaptcha':
             return new Promise(function(resolve, reject) {
-                code = 'if ($(".g-recaptcha").length > 0 || document.location.href.includes("k=")) { var end = document.location.href.indexOf("&",document.location.href.indexOf("k=")); if(end==-1) end = document.location.href.indexOf("#",document.location.href.indexOf("k=")); if(end==-1) end = 9999; var sitekey = $(".g-recaptcha").attr("data-sitekey") || document.location.href.substring(document.location.href.indexOf("k=")+2,end);sitekey; } else { throw "NOCAPTCHAFOUND"; }';
+                code = 'if ($(".g-recaptcha").length > 0 || document.location.href.includes("k=")) { let end = document.location.href.indexOf("&",document.location.href.indexOf("k=")); if(end==-1) end = document.location.href.indexOf("#",document.location.href.indexOf("k=")); if(end==-1) end = 9999; let sitekey = $(".g-recaptcha").attr("data-sitekey") || document.location.href.substring(document.location.href.indexOf("k=")+2,end);sitekey; } else { throw "NOCAPTCHAFOUND"; }';
                 runCode(code, node).then(function(result){
-                    var sitekey = result.results[0];
+                    let sitekey = result.results[0];
                     runCode("location.host", node).then(function(result) {
                         $.ajax({
                             method: "POST",
@@ -2292,7 +2292,7 @@ function execEvent(node) {
                             data: sitekey + "," + result.results[0] + "," + bgSettings.cloudapikey || ""
                         }).always(function(resp) {
                             runCode("$('#g-recaptcha-response').html('" + resp.responseText + "');", node).then(function(result){
-                                var runcode = "var script = document.createElement('script');\
+                                let runcode = "var script = document.createElement('script');\
                                     script.setAttribute(\"type\", \"application/javascript\");\
                                     script.textContent = \"window['___grecaptcha_cfg']['clients'][0]['T']['Rk']['callback']('" + resp.responseText + "');\";\
                                     document.documentElement.appendChild(script);\
@@ -2342,7 +2342,7 @@ function runCode(code, node) {
 
 function runCodeFrameURLPrefix(code, node, urlprefix) {
     return new Promise(function(resolve, reject) {
-        if (code == "" || code == ";" || code == ";;") {
+        if (code === "" || code === ";" || code === ";;") {
             resolve({
                 error: false,
                 results: null,
@@ -2352,8 +2352,8 @@ function runCodeFrameURLPrefix(code, node, urlprefix) {
         }
 
         try {
-            var frameId = 0;
-            var activeTab = 0;
+            let frameId = 0;
+            let activeTab = 0;
 
             function runCodeInActiveTab(tabs) {
                 for (var i=0; i<tabs.length; i++) {
@@ -2367,10 +2367,10 @@ function runCodeFrameURLPrefix(code, node, urlprefix) {
                             frameId = frames[j].frameId;
                             break;
                         }
-                        if (urlprefix != null && frames[j].frameId!=0 && frames[j].url.startsWith(urlprefix)) {
+                        if (urlprefix !== null && frames[j].frameId!=0 && frames[j].url.startsWith(urlprefix)) {
                             frameId = frames[j].frameId;
                             break;
-                        } else if (frames[j].frameId!=0 && frames[j].url == node.userData.evt_data.url) {
+                        } else if (frames[j].frameId!=0 && frames[j].url === node.userData.evt_data.url) {
                             frameId = frames[j].frameId;
                             break;
                         }
@@ -2462,22 +2462,22 @@ function waitForTime(resolve, time, returnvar) {
         if (time === undefined)
             time = "12:00:00 AM";
         
-        var b = time.match(/\d+/g);
+        let b = time.match(/\d+/g);
         if (!b) return;
 
-        var d = new Date();
+        let d = new Date();
         d.setHours(b[0]>12? b[0] : b[0]%12 + (/p/i.test(time)? 12 : 0), // hours
              /\d/.test(b[1])? b[1] : 0,     // minutes
              /\d/.test(b[2])? b[2] : 0);    // seconds
         
-        if (d.toTimeString() == new Date().toTimeString())
+        if (d.toTimeString() === new Date().toTimeString())
             resolve(returnvar);
     }, 100);
 }
 
 function waitForTitle(resolve, expected_title, returnvar) {
     waitForTitleInterval = setInterval(function(){
-        var activeTab = 0;
+        let activeTab = 0;
 		try {
             function waitForTitleInActiveTab(tabs) {
                 try {
@@ -2511,12 +2511,12 @@ function waitForTitle(resolve, expected_title, returnvar) {
 
 function testExpression(resolve, expression, returnvar) {
     testExpressionInterval = setInterval(function(){
-        var activeTab = 0;
+        let activeTab = 0;
         try {
             expression = expression.replace("=","==").replace("====","==");
 
-            var parser = new Parser();
-            var result = parser.evaluate(expression,simulation_variables);
+            let parser = new Parser();
+            let result = parser.evaluate(expression,simulation_variables);
             if (result === true)
                 resolve(returnvar);
         } catch(err) {;}
@@ -2525,7 +2525,7 @@ function testExpression(resolve, expression, returnvar) {
 
 function waitForElement(resolve, csspath, returnvar) {
     waitForElementInterval = setInterval(function(){
-        var activeTab = 0;
+        let activeTab = 0;
 		try {
             function waitForElementInActiveTab(tabs) {
                 try {
@@ -2624,7 +2624,7 @@ function terminateSimulation(finished, reason) {
             "format": "png"
         }, function(imagedata){
             chrome.storage.local.get('simulations', function (result) {
-                var simulations = result.simulations;
+                let simulations = result.simulations;
                 if (!Array.isArray(simulations)) { // for safety only
                     simulations = [];
                 }
@@ -2654,7 +2654,7 @@ function terminateSimulation(finished, reason) {
         });
     } catch(err) {
         chrome.storage.local.get('simulations', function (result) {
-            var simulations = result.simulations;
+            let simulations = result.simulations;
             if (!Array.isArray(simulations)) { // for safety only
                 simulations = [];
             }
@@ -2683,14 +2683,14 @@ function pixelMatch(px1, px2, variance) {
 }
 
 function findSubimage(haystackSrc, needleSrc, color_variance, node, resolve, reject) {
-    var haystackCanvas = document.createElement('canvas');
-    var needleCanvas = document.createElement('canvas');
-    var needleContext, haystackContext;
+    let haystackCanvas = document.createElement('canvas');
+    let needleCanvas = document.createElement('canvas');
+    let needleContext, haystackContext;
     
-    var haystackImg = new Image();
-    var needleImg = new Image();
-    var needlePixel, haystackPixel;
-    var breakloop = false;
+    let haystackImg = new Image();
+    let needleImg = new Image();
+    let needlePixel, haystackPixel;
+    let breakloop = false;
     
     needleImg.onload = function () {
         needleCanvas.width = needleImg.width;
@@ -2725,7 +2725,7 @@ function findSubimage(haystackSrc, needleSrc, color_variance, node, resolve, rej
                         if (breakloop) break;
                     }
                     if (!breakloop) {
-                        var scalingFactor = window.devicePixelRatio;
+                        let scalingFactor = window.devicePixelRatio;
 
                         simulation_variables['_FINDIMAGE_X'] = parseInt((x + parseInt(needleCanvas.width/2))/scalingFactor);
                         simulation_variables['_FINDIMAGE_Y'] = parseInt((y + parseInt(needleCanvas.height/2))/scalingFactor);
