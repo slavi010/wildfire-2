@@ -12,7 +12,11 @@ var new_window;
 var sim_start_time;
 var terminated = false;
 var simulation_log = [];
-var waitForElementInterval, waitForTitleInterval, testExpressionInterval, waitForTimeInterval, nativeInterval;
+var waitForElementIntervals = [];
+var waitForTitleIntervals = [];
+var testExpressionIntervals = [];
+var waitForTimeIntervals = [];
+var nativeInterval = [];
 var simulating = false;
 var last_node;
 var isFavSim = false;
@@ -186,7 +190,7 @@ function resolveChar(str) {
 
     if (charInt === 190)
         return ".";
-    
+
     return String.fromCharCode(charInt);
 }
 
@@ -215,7 +219,7 @@ function eresolveVariable(str) {
             return String(str[0]) + eresolveVariable(str.substring(1));
         if (str[1] === '$')
             return "$" + eresolveVariable(str.substring(2));
-        
+
         let i = 2;
         let varname = false;
         while (!varname) {
@@ -258,7 +262,7 @@ function updateWorkflowData() {
                 } else if (workflow.workflow) {
                     let wfobj = JSON.parse(decrypt(workflow.workflow));
                     let canvas_elements = wfobj.canvas;
-                    
+
                     nodes = [];
                     links = [];
 
@@ -317,7 +321,7 @@ function updateWorkflowDataToFavorite(favorite_index) {
 		chrome.storage.local.get('favorites', function (favorites) {
 			var wfobj = JSON.parse(decrypt(favorites.favorites[favorite_index].workflow));
 			var canvas_elements = wfobj.canvas;
-			
+
 			nodes = [];
 			links = [];
 
@@ -565,7 +569,7 @@ chrome.webRequest.onAuthRequired !== undefined && chrome.webRequest.onAuthRequir
 		}
 		return;
 	},
-	{urls: ["<all_urls>"]}, 
+	{urls: ["<all_urls>"]},
 	["blocking"]
 );
 
@@ -684,7 +688,7 @@ if (typeof InstallTrigger === 'undefined') { // NOT Firefox
 }
 
 chrome.runtime.onInstalled !== undefined && chrome.runtime.onInstalled.addListener(function(details){ // special handling - not present in FF
-    chrome.storage.local.set({simulating: false});    
+    chrome.storage.local.set({simulating: false});
     if (details.reason === "install") {
         if (navigator.userAgent.includes("Wildfire")) {
             if (typeof InstallTrigger !== 'undefined') { // Firefox
@@ -960,7 +964,7 @@ function begin_sim_with_option(fav_index) {
 			incognito = true;
 
 		var url = chrome.extension.getURL("new.html");
-		
+
         let window_options = {
 			"url":url,
 			"left":0,
@@ -983,7 +987,7 @@ function begin_sim_with_option(fav_index) {
 					state: "maximized"
 				});
             }
-			
+
 			setTimeout(function(new_window){
                 if (typeof InstallTrigger === 'undefined') { // NOT Firefox
                     chrome.tabs.query({windowId: new_window.id}, function(tabs){
@@ -1000,10 +1004,10 @@ function begin_sim_with_option(fav_index) {
 					state: "terminated",
 					reason: "run_timeout"
 				});
-				
+
 				terminateSimulation(false, "Global run timeout"); // TODO: Check
             }, 60*60*1000*24); // 24 hours
-			
+
 			chrome.windows.onRemoved.addListener(closeListenerCallback); // TODO: Check
 
             if (fav_index==-1) {
@@ -1032,7 +1036,7 @@ function begin_sim_with_option(fav_index) {
                             setTimeout(function(node){
                                 processEvent(node);
                             }, 2000, node);
-                        } else                    
+                        } else
                             processEvent(node);
                     }, 200, node);
                 }).catch(function(){
@@ -1071,7 +1075,7 @@ function begin_sim_with_option(fav_index) {
                             setTimeout(function(node){
                                 processEvent(node);
                             }, 2000, node);
-                        } else                    
+                        } else
                             processEvent(node);
                     }, 200, node);
                 }).catch(function(){
@@ -1096,9 +1100,9 @@ function closeListenerCallback(closed_window_id) {
 function processEvent(node) {
     if (terminated)
 		return;
-    
+
     last_node = node;
-    
+
     setDefaultSimulationVariables();
 
     execEvent(node).then(function(result){
@@ -1134,7 +1138,7 @@ function processOCR(imagedata, node, resolve, reject) {
                 word_matches.push(tessaresult.words[i]);
             }
         }
-        
+
         if (word_matches.length > 0) {
             let matchtext = "";
             if (node.userData.evt_data.useFuzzyMatch) {
@@ -1199,8 +1203,8 @@ function logResultAndRaceLinks(result, failure, node) {
 		return;
 	}
 
-	var nodeConnectionPromises = [];
-	for (var i=0; i<links.length; i++) {
+	let nodeConnectionPromises = [];
+	for (let i=0; i<links.length; i++) {
 		if (links[i].source.node === node.id) {
 			nodeConnectionPromises.push(
 				new Promise(function(resolve, reject) {
@@ -1226,7 +1230,7 @@ function logResultAndRaceLinks(result, failure, node) {
 			);
 		}
 	}
-	
+
 	if (nodeConnectionPromises.length === 0) {
 		if (failure)
 			send_message({
@@ -1245,10 +1249,10 @@ function logResultAndRaceLinks(result, failure, node) {
 	} else {
 		Promise.race(nodeConnectionPromises)
 		.then(function(winning_link) {
-			clearInterval(waitForElementInterval);
-			clearInterval(waitForTitleInterval);
-			clearInterval(waitForTimeInterval);
-			clearInterval(testExpressionInterval);
+            waitForElementIntervals.forEach((w) => clearInterval(w));
+            waitForTitleIntervals.forEach((w) => clearInterval(w));
+            waitForTimeIntervals.forEach((w) => clearInterval(w));
+            testExpressionIntervals.forEach((w) => clearInterval(w));
 			if (!terminated) {
 				if (failure)
 					send_message({
@@ -1316,7 +1320,7 @@ function execEvent(node) {
                     return new Promise(function(resolve, reject) {
                         let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
                         let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
-                        
+
                         sendNativeMessage({
                             'action': 'mousedown',
                             'x': clickx.toString(),
@@ -1386,7 +1390,7 @@ function execEvent(node) {
                     return new Promise(function(resolve, reject) {
                         let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
                         let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
-                        
+
                         sendNativeMessage({
                             'action': 'mouseup',
                             'x': clickx.toString(),
@@ -1469,7 +1473,7 @@ function execEvent(node) {
                     return new Promise(function(resolve, reject) {
                         let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
                         let clicky = parseInt(resolveVariable(node.userData.evt_data.clientY)) || 0;
-                        
+
                         sendNativeMessage({
                             'action': 'click',
                             'x': clickx.toString(),
@@ -1543,6 +1547,7 @@ function execEvent(node) {
             if (bgSettings.simulatefocusout) {
                 code = "$('" + resolveVariable(node.userData.evt_data.csspath) + "').blur();true;";
             }
+
             break;
         case 'keydown':
             if (bgSettings.simulatekeydown) {
@@ -1651,7 +1656,7 @@ function execEvent(node) {
         case 'keypress':
             if (bgSettings.simulatekeypress) {
                 if (node.userData.useOSInput) {
-                    return new Promise(function(resolve, reject) { 
+                    return new Promise(function(resolve, reject) {
                         sendNativeMessage({
                             'action': 'keypress',
                             'key': String(parseInt(resolveVariable(node.userData.evt_data.keyCode))),
@@ -1666,7 +1671,7 @@ function execEvent(node) {
                         });
                     });
                 }
-                
+
                 if (node.userData.useDirectInput) {
                     return new Promise(function(resolve, reject) {
                         code = "$('" + resolveVariable(node.userData.evt_data.csspath) + "').focus();";
@@ -1735,7 +1740,7 @@ function execEvent(node) {
                     return new Promise(function(resolve, reject) {
                         try {
                             code = "$('" + resolveVariable(node.userData.evt_data.csspath) + "').focus();$('" + resolveVariable(node.userData.evt_data.csspath) + "').val();";
-                            
+
                             runCode(code, node).then(function(result){
                                 chrome.tabs.query({windowId: new_window.id, active: true}, function(tabs) {
                                     // TODO - deal with period char
@@ -1744,7 +1749,7 @@ function execEvent(node) {
                                         chrome.debugger.sendCommand({ tabId: tabs[0].id }, 'Input.dispatchKeyEvent', { unmodifiedText: node.userData.evt_data.value[node.userData.evt_data.value.length-1], text: node.userData.evt_data.value[node.userData.evt_data.value.length-1], type: 'rawKeyDown', windowsVirtualKeyCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), nativeVirtualKeyCode : (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), macCharCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0))  });
                                         chrome.debugger.sendCommand({ tabId: tabs[0].id }, 'Input.dispatchKeyEvent', { unmodifiedText: node.userData.evt_data.value[node.userData.evt_data.value.length-1], text: node.userData.evt_data.value[node.userData.evt_data.value.length-1], type: 'char', windowsVirtualKeyCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), nativeVirtualKeyCode : (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), macCharCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0))  });
                                         chrome.debugger.sendCommand({ tabId: tabs[0].id }, 'Input.dispatchKeyEvent', { unmodifiedText: node.userData.evt_data.value[node.userData.evt_data.value.length-1], text: node.userData.evt_data.value[node.userData.evt_data.value.length-1], type: 'keyUp', windowsVirtualKeyCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), nativeVirtualKeyCode : (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)), macCharCode: (node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0)=="." ? 190 : node.userData.evt_data.value[node.userData.evt_data.value.length-1].charCodeAt(0))  });
-                                        chrome.debugger.detach({ tabId: tabs[0].id });     
+                                        chrome.debugger.detach({ tabId: tabs[0].id });
                                         resolve({
                                             error: false,
                                             results: null,
@@ -1760,7 +1765,7 @@ function execEvent(node) {
                                         });
                                     } else {
                                         code = "$('" + resolveVariable(node.userData.evt_data.csspath) + "').val('');";
-                                        
+
                                         runCode(code, node).then(function(result){
                                             for (var j=0; j<resolveVariable(node.userData.evt_data.value).length; j++) {
                                                 chrome.debugger.attach({ tabId: tabs[0].id }, "1.0");
@@ -1776,7 +1781,7 @@ function execEvent(node) {
                                                 time: Date.now()
                                             });
                                         });
-                                    } 
+                                    }
                                 });
                             }).catch(function(result){
                                 resolve({
@@ -1833,7 +1838,7 @@ function execEvent(node) {
                         })
                         cookieresults = "Domains purged: " + uniqueDomains.join(", ");
                     }
-                    
+
                     resolve({
                         error: (cookiepurgeresults.length > 0) ? true : false,
                         results: [cookieresults],
@@ -1878,7 +1883,7 @@ function execEvent(node) {
                             id: node.id,
                             time: Date.now()
                         });
-                    
+
                     resolve({
                         error: false,
                         results: null,
@@ -1929,7 +1934,7 @@ function execEvent(node) {
                     chrome.tabs.update(tabs[newActiveTab].id, {
                         active: true
                     });
-                    
+
                     resolve({
                         error: false,
                         results: null,
@@ -1972,7 +1977,7 @@ function execEvent(node) {
                             url: resolvedURL
                         });
                     }
-                    
+
                     resolve({
                         error: false,
                         results: null,
@@ -2332,7 +2337,7 @@ function execEvent(node) {
             terminateSimulation(false, "Unknown event type: " + node.userData.evt); // TODO - check
             break;
     }
-        
+
     return runCode(code, node);
 }
 
@@ -2356,7 +2361,7 @@ function runCodeFrameURLPrefix(code, node, urlprefix) {
             let activeTab = 0;
 
             function runCodeInActiveTab(tabs) {
-                for (var i=0; i<tabs.length; i++) {
+                for (let i=0; i<tabs.length; i++) {
                     if (tabs[i].active)
                         activeTab = i;
                 }
@@ -2458,106 +2463,129 @@ function runCodeFrameURLPrefix(code, node, urlprefix) {
 }
 
 function waitForTime(resolve, time, returnvar) {
-    waitForTimeInterval = setInterval(function(){
-        if (time === undefined)
-            time = "12:00:00 AM";
-        
-        let b = time.match(/\d+/g);
-        if (!b) return;
+    waitForTimeIntervals.push(setInterval(
+        () => _waitForTimeFunction(resolve, time, returnvar),
+        100));
+    _waitForTimeFunction(resolve, time, returnvar);
+}
 
-        let d = new Date();
-        d.setHours(b[0]>12? b[0] : b[0]%12 + (/p/i.test(time)? 12 : 0), // hours
-             /\d/.test(b[1])? b[1] : 0,     // minutes
-             /\d/.test(b[2])? b[2] : 0);    // seconds
-        
-        if (d.toTimeString() === new Date().toTimeString())
-            resolve(returnvar);
-    }, 100);
+function _waitForTimeFunction(resolve, time, returnvar) {
+    if (time === undefined)
+        time = "12:00:00 AM";
+
+    let b = time.match(/\d+/g);
+    if (!b) return;
+
+    let d = new Date();
+    d.setHours(b[0]>12? b[0] : b[0]%12 + (/p/i.test(time)? 12 : 0), // hours
+        /\d/.test(b[1])? b[1] : 0,     // minutes
+        /\d/.test(b[2])? b[2] : 0);    // seconds
+
+    if (d.toTimeString() === new Date().toTimeString())
+        resolve(returnvar);
 }
 
 function waitForTitle(resolve, expected_title, returnvar) {
-    waitForTitleInterval = setInterval(function(){
-        let activeTab = 0;
-		try {
-            function waitForTitleInActiveTab(tabs) {
-                try {
-					for (var i=0; i<tabs.length; i++) {
-						if (tabs[i].active)
-							activeTab = i;
-					}
-					chrome.tabs.executeScript(tabs[activeTab].id,{
-						code: "document.title",
-						frameId: 0, // TODO - frame support
-						matchAboutBlank: true
-					}, function(results){
-						if (results && results[0] && results[0]==expected_title)
-							resolve(returnvar);
-					});
-				} catch(err) {;}
-            }
+    waitForTitleIntervals.push(setInterval(
+        () => _waitForTitleFunction(resolve, expected_title, returnvar),
+        100));
+    _waitForTitleFunction(resolve, expected_title, returnvar);
+}
 
-            if (typeof InstallTrigger === 'undefined') { // NOT Firefox
-                chrome.tabs.query({windowId: new_window.id}, function(tabs){
-                    waitForTitleInActiveTab(tabs);
+function _waitForTitleFunction(resolve, expected_title, returnvar) {
+    let activeTab = 0;
+    try {
+        function waitForTitleInActiveTab(tabs) {
+            try {
+                for (var i=0; i<tabs.length; i++) {
+                    if (tabs[i].active)
+                        activeTab = i;
+                }
+                chrome.tabs.executeScript(tabs[activeTab].id,{
+                    code: "document.title",
+                    frameId: 0, // TODO - frame support
+                    matchAboutBlank: true
+                }, function(results){
+                    if (results && results[0] && results[0]==expected_title)
+                        resolve(returnvar);
                 });
-            } else {
-                browser.tabs.query({windowId: new_window.id}).then(function(tabs){
-                    waitForTitleInActiveTab(tabs);
-                });
-            }
-		} catch(err) {;}
-    }, 100);
+            } catch(err) {;}
+        }
+
+        if (typeof InstallTrigger === 'undefined') { // NOT Firefox
+            chrome.tabs.query({windowId: new_window.id}, function(tabs){
+                waitForTitleInActiveTab(tabs);
+            });
+        } else {
+            browser.tabs.query({windowId: new_window.id}).then(function(tabs){
+                waitForTitleInActiveTab(tabs);
+            });
+        }
+    } catch(err) {;}
 }
 
 function testExpression(resolve, expression, returnvar) {
-    testExpressionInterval = setInterval(function(){
-        let activeTab = 0;
-        try {
-            expression = expression.replace("=","==").replace("====","==");
-
-            let parser = new Parser();
-            let result = parser.evaluate(expression,simulation_variables);
-            if (result === true)
-                resolve(returnvar);
-        } catch(err) {;}
-    }, 100);
+    testExpressionIntervals.push(setInterval(
+        () => _testExpressionFunction(resolve, expression, returnvar),
+        100));
+    _testExpressionFunction(resolve, expression, returnvar);
 }
+
+function _testExpressionFunction(resolve, expression, returnvar) {
+    let activeTab = 0;
+    try {
+        expression = expression.replace("=","===").replace("====","===");
+
+        let parser = new Parser();
+        let result = parser.evaluate(expression,simulation_variables);
+        if (result === true)
+            resolve(returnvar);
+    } catch(err) {;}
+}
+
 
 function waitForElement(resolve, csspath, returnvar) {
-    waitForElementInterval = setInterval(function(){
-        let activeTab = 0;
-		try {
-            function waitForElementInActiveTab(tabs) {
-                try {
-					for (var i=0; i<tabs.length; i++) {
-						if (tabs[i].active)
-							activeTab = i;
-					}
-					chrome.tabs.executeScript(tabs[activeTab].id,{
-						code: "$('" + csspath + "').length",
-						frameId: 0, // TODO - frame support
-                        //allFrames: true,
-						matchAboutBlank: true
-					}, function(results){
-						if (results && results[0])
-							resolve(returnvar);
-					});
-				} catch(err) {;}
-            }
-
-            if (typeof InstallTrigger === 'undefined') { // NOT Firefox
-                chrome.tabs.query({windowId: new_window.id}, function(tabs){
-                    waitForElementInActiveTab(tabs);
-                });
-            } else {
-                browser.tabs.query({windowId: new_window.id}).then(function(tabs){
-                    waitForElementInActiveTab(tabs);
-                });
-            }
-
-		} catch(err) {;}
-    }, 100);
+    waitForElementIntervals.push(setInterval(
+        () => _waitForElementFunction(resolve, csspath, returnvar),
+        100));
+    _waitForElementFunction(resolve, csspath, returnvar);
 }
+
+function _waitForElementFunction(resolve, csspath, returnvar) {
+    let activeTab = 0;
+    try {
+        function waitForElementInActiveTab(tabs) {
+            try {
+                for (var i=0; i<tabs.length; i++) {
+                    if (tabs[i].active)
+                        activeTab = i;
+                }
+                chrome.tabs.executeScript(tabs[activeTab].id,{
+                    code: "$('" + csspath + "').length",
+                    frameId: 0, // TODO - frame support
+                    //allFrames: true,
+                    matchAboutBlank: true
+                }, function(results){
+                    if (results && results[0])
+                        resolve(returnvar);
+                });
+            } catch(err) {;}
+        }
+
+        if (typeof InstallTrigger === 'undefined') { // NOT Firefox
+            chrome.tabs.query({windowId: new_window.id}, function(tabs){
+                waitForElementInActiveTab(tabs);
+            });
+        } else {
+            browser.tabs.query({windowId: new_window.id}).then(function(tabs){
+                waitForElementInActiveTab(tabs);
+            });
+        }
+
+    } catch(err) {;}
+}
+
+
 
 function terminateSimulation(finished, reason) {
 	if (terminated)
@@ -2565,7 +2593,7 @@ function terminateSimulation(finished, reason) {
 	terminated = true; // prevent race against close listener
 
     chrome.storage.local.set({simulating: false});
-	
+
     if (!isFavSim) {
     	chrome.windows.onRemoved.removeListener(closeListenerCallback);
         clearTimeout(timeoutObject);
@@ -2601,7 +2629,7 @@ function terminateSimulation(finished, reason) {
             ;//console.log("Finished clearing browsing history");
         });
     }
-	
+
     simulating = false;
 
     setTimeout(function(){
@@ -2686,12 +2714,12 @@ function findSubimage(haystackSrc, needleSrc, color_variance, node, resolve, rej
     let haystackCanvas = document.createElement('canvas');
     let needleCanvas = document.createElement('canvas');
     let needleContext, haystackContext;
-    
+
     let haystackImg = new Image();
     let needleImg = new Image();
     let needlePixel, haystackPixel;
     let breakloop = false;
-    
+
     needleImg.onload = function () {
         needleCanvas.width = needleImg.width;
         needleCanvas.height = needleImg.height;
@@ -2704,14 +2732,14 @@ function findSubimage(haystackSrc, needleSrc, color_variance, node, resolve, rej
 
             haystackContext.drawImage(haystackImg, 0, 0, haystackCanvas.width, haystackCanvas.height);
             needleContext.drawImage(needleImg, 0, 0, needleCanvas.width, needleCanvas.height);
-    
+
             needlePixels = needleContext.getImageData(0, 0, needleCanvas.width, needleCanvas.height).data;
             haystackPixels = haystackContext.getImageData(0, 0, haystackCanvas.width, haystackCanvas.height).data;
 
             for (var y=0; y<haystackCanvas.height-needleCanvas.height; y++) {
                 for (var x=0; x<haystackCanvas.width-needleCanvas.width; x++) {
                     haystackPixel = [haystackPixels[4*((haystackCanvas.width*y)+x)],haystackPixels[4*((haystackCanvas.width*y)+x)+1],haystackPixels[4*((haystackCanvas.width*y)+x)+2],haystackPixels[4*((haystackCanvas.width*y)+x)+3]];
-                    
+
                     breakloop = false;
                     for (var ny=0; ny<needleCanvas.height; ny++) {
                         for (var nx=0; nx<needleCanvas.width; nx++) {
@@ -2744,7 +2772,7 @@ function findSubimage(haystackSrc, needleSrc, color_variance, node, resolve, rej
                     }
                 }
             }
-            
+
             resolve({
                 error: true,
                 results: ["Could not find a matching image"],
