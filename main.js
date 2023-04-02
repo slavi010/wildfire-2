@@ -1216,7 +1216,10 @@ function logResultAndRaceLinks(result, failure, node) {
                             wait_time = links[i].userData.wait_time;
 						setTimeout(resolve, wait_time, links[i]);
 					} else if (links[i].userData.evt === "wait_for_element") {
-						waitForElement(resolve, resolveVariable(links[i].userData.csspath), links[i]);
+						waitForElement(resolve,
+                            resolveVariable(links[i].userData.csspath),
+                            resolveVariable(links[i].userData.iframes_csspath),
+                            links[i]);
 					} else if (links[i].userData.evt === "wait_for_title") {
 						waitForTitle(resolve, resolveVariable(links[i].userData.title), links[i]);
                     } else if (links[i].userData.evt === "test_expression") {
@@ -1469,6 +1472,22 @@ function execEvent(node) {
             break;
         case 'click':
             if (bgSettings.simulateclick) {
+                // we cant debug via the console log (because we are in an extension)
+                // so we need to use the native messaging api to send a message to the
+                console.log("click");
+                if (resolveVariable(node.userData.evt_data.iframes_csspath) !== undefined
+                    && resolveVariable(node.userData.evt_data.iframes_csspath).length > 0) {
+                    code = pathToIframe(resolveVariable(node.userData.evt_data.iframes_csspath));
+
+                    code += ".querySelector('" + resolveVariable(node.userData.evt_data.csspath) + "')" +
+                        ".click();true;";
+
+                    console.log(code);
+                    break;
+                }
+
+
+
                 if (node.userData.useOSInput) {
                     return new Promise(function(resolve, reject) {
                         let clickx = parseInt(resolveVariable(node.userData.evt_data.clientX)) || 0;
@@ -2531,6 +2550,32 @@ function testExpression(resolve, expression, returnvar) {
     _testExpressionFunction(resolve, expression, returnvar);
 }
 
+
+/**
+ * This function takes a string of csspaths separated by semicolons and returns a string of javascript code that will
+ * navigate to the iframe specified by the csspath.
+ *
+ * Example:
+ * pathToIframe("iframe#myIframe;iframe#myIframe2")
+ * ->
+ * "document.querySelector('iframe#myIframe').contentWindow.document.querySelector('iframe#myIframe2').contentWindow.document"
+ *
+ * @param iframes_csspath {string} - A string of csspaths separated by semicolons
+ * @returns {string} A string of javascript code that will navigate to the iframe specified by the csspath
+ */
+function pathToIframe(iframes_csspath) {
+    let iframes_csspaths = iframes_csspath.split(";");
+    if (iframes_csspath.trim().length === 0)
+        iframes_csspaths = [];
+
+    let code = "document";
+    iframes_csspaths.forEach((iframe_csspaths) => {
+        code += ".querySelector('" + iframe_csspaths + "').contentWindow.document";
+    });
+    return code;
+}
+
+
 function _testExpressionFunction(resolve, expression, returnvar) {
     let activeTab = 0;
     try {
@@ -2544,28 +2589,41 @@ function _testExpressionFunction(resolve, expression, returnvar) {
 }
 
 
-function waitForElement(resolve, csspath, returnvar) {
+function waitForElement(resolve, csspath, iframes_csspath, returnvar) {
     waitForElementIntervals.push(setInterval(
-        () => _waitForElementFunction(resolve, csspath, returnvar),
+        () => _waitForElementFunction(resolve, csspath, iframes_csspath, returnvar),
         100));
-    _waitForElementFunction(resolve, csspath, returnvar);
+    _waitForElementFunction(resolve, csspath, iframes_csspath, returnvar);
 }
 
-function _waitForElementFunction(resolve, csspath, returnvar) {
+function _waitForElementFunction(resolve, csspath, iframes_csspath, returnvar) {
     let activeTab = 0;
     try {
         function waitForElementInActiveTab(tabs) {
             try {
-                for (var i=0; i<tabs.length; i++) {
+                for (let i=0; i<tabs.length; i++) {
                     if (tabs[i].active)
                         activeTab = i;
                 }
-                chrome.tabs.executeScript(tabs[activeTab].id,{
-                    code: "$('" + csspath + "').length",
+                console.log("activeTab: " + activeTab);
+
+                let iframes_csspaths = iframes_csspath.split(";");
+                if (iframes_csspath.trim().length === 0)
+                    iframes_csspaths = [];
+
+                let code = "document";
+                iframes_csspaths.forEach((iframe_csspaths) => {
+                    code += ".querySelector('" + iframe_csspaths + "').contentWindow.document";
+                });
+
+                code += ".querySelectorAll('" + csspath + "').length";
+
+                chrome.tabs.executeScript(tabs[activeTab].id, {
+                    code: code,
                     frameId: 0, // TODO - frame support
                     //allFrames: true,
                     matchAboutBlank: true
-                }, function(results){
+                }, function (results) {
                     if (results && results[0])
                         resolve(returnvar);
                 });
@@ -2582,7 +2640,9 @@ function _waitForElementFunction(resolve, csspath, returnvar) {
             });
         }
 
-    } catch(err) {;}
+    } catch(err) {
+        console.log(err);
+    }
 }
 
 

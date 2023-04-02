@@ -105,6 +105,8 @@ function getEventOptionsHtml(userdata) {
             "    </div>" +
             "    <br /><label class=\"form-label semibold\" for=\"event_css_selector\">CSS Selector</label>" +
             "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"csspath\" id=\"event_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.csspath, "") + "\">" +
+            "    <br /><label class=\"form-label semibold\" for=\"event_iframes_css_selector\">Iframes CSS Selector (divider=; top to deepest one; if set ignore all options except 'CSS Selector')</label>" +
+            "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"iframes_csspath\" id=\"event_iframes_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.iframes_csspath, "") + "\">" +
             "</div>";
     } else if (userdata.evt === "mouseup" || userdata.evt === "mousedown") {
         return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_x\">Position</label>" +
@@ -378,6 +380,8 @@ function getEventOptionsHtml(userdata) {
     } else if (userdata.evt === "wait_for_element") {
         return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_detail_csspath\">CSS Selector</label>" +
             "    <input type=\"text\" class=\"form-control\" id=\"event_detail_csspath\" value=\"" + escapeOrDefault(userdata.csspath, "") + "\">" +
+            "    <br /><label class=\"form-label semibold\" for=\"event_iframes_css_selector\">Iframes CSS Selector (divider=; top to deepest one)</label>" +
+            "    <input type=\"text\" class=\"form-control event-detail\" data-event-detail=\"iframes_csspath\" id=\"event_iframes_css_selector\" value=\"" + escapeOrDefault(userdata.evt_data.iframes_csspath, "") + "\">" +
             "</div>";
     } else if (userdata.evt === "wait_for_title") {
         return "<div class=\"form-group\"><label class=\"form-label semibold\" for=\"event_detail_title\">Title</label>" +
@@ -535,6 +539,7 @@ function selectedFigure(figure) {
     setDetailListeners();
 }
 
+
 function changeType() {
     let userData = figure.userData;
     userData.evt = $('#sidePanelTypeSelect').val();
@@ -600,6 +605,12 @@ function setDetailListeners() {
     $('#event_detail_csspath').on('input', function () {
         let userData = figure.userData;
         userData['csspath'] = $('#event_detail_csspath').val();
+        figure.setUserData(userData);
+        figure.updateUserData();
+    });
+    $('#event_iframes_css_selector').on('input', function () {
+        let userData = figure.userData;
+        userData['iframes_csspath'] = $('#event_iframes_css_selector').val();
         figure.setUserData(userData);
         figure.updateUserData();
     });
